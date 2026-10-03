@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pannes – Service technique</title>
+<meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --fond: #f3f4f8; --carte: #ffffff; --texte: #111827; --doux: #6b7280; --bord: #e5e7eb;
+    --sombre: #111827;
+    --panne: #e53935; --cafe: #8e44ad; --entretien: #1e88e5; --livraison: #2ea043;
+    --accent: var(--sombre);
+    --rayon: 18px; --ombre: 0 6px 24px rgba(17,24,39,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--fond); color: var(--texte); min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  .cache { display: none !important; }
+
+  /* En-tête */
+  header {
+    background: var(--sombre); color: #fff; padding: 14px 16px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10;
+  }
+  .logo { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 30px; height: 30px; flex: none; }
+  .logo i { border-radius: 4px; }
+  .logo i:nth-child(1) { background: var(--panne); } .logo i:nth-child(2) { background: var(--cafe); }
+  .logo i:nth-child(3) { background: var(--entretien); } .logo i:nth-child(4) { background: var(--livraison); }
+  header h1 { font-size: 1.1rem; margin: 0; flex: 1; font-weight: 650; }
+  header h1 small { display: block; font-weight: 400; opacity: .7; font-size: .78rem; }
+  .btn-lien { background: rgba(255,255,255,.12); border: 0; color: #fff; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
+  .btn-lien:hover { background: rgba(255,255,255,.22); }
+
+  main { max-width: 920px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  /* Cartes génériques */
+  .boite { background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); padding: 22px; }
+  h2 { font-size: 1.25rem; margin: 0 0 6px; }
+  .aide { color: var(--doux); margin: 0 0 18px; font-size: .95rem; }
+
+  /* Connexion */
+  #ecran-connexion { min-height: 70vh; display: grid; place-items: center; }
+  #ecran-connexion .boite { width: 100%; max-width: 400px; }
+  label.champ { display: block; font-weight: 600; margin-bottom: 6px; font-size: .92rem; }
+  input[type=password], input[type=search], input[type=text], textarea {
+    width: 100%; border: 1.5px solid var(--bord); border-radius: 12px; padding: 12px 14px; background: #fff;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+  .case { display: flex; gap: 10px; align-items: center; margin: 14px 0 18px; color: var(--doux); cursor: pointer; }
+  .case input { width: 20px; height: 20px; accent-color: var(--sombre); }
+  .btn {
+    width: 100%; border: 0; border-radius: 14px; padding: 15px 18px; font-weight: 700; font-size: 1.05rem;
+    background: var(--accent); color: #fff; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 10px;
+    transition: transform .08s, filter .15s, opacity .15s;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: scale(.99); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.secondaire { background: #fff; color: var(--texte); border: 1.5px solid var(--bord); }
+
+  .message { border-radius: 12px; padding: 12px 14px; margin-top: 14px; font-size: .95rem; display: flex; gap: 10px; align-items: flex-start; }
+  .message.erreur { background: #fdecec; color: #9b1c1c; }
+  .message.ok { background: #e8f6ec; color: #17642c; }
+  .message button { margin-left: auto; flex: none; background: #fff; border: 1px solid currentColor; color: inherit; border-radius: 9px; padding: 6px 10px; cursor: pointer; font-weight: 600; }
+
+  /* Choix du type */
+  .types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (min-width: 760px) { .types { grid-template-columns: repeat(4, 1fr); } }
+  .type {
+    --c: var(--panne);
+    border: 0; border-radius: var(--rayon); padding: 22px 14px; min-height: 140px; cursor: pointer; color: #fff;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--c) 35%, transparent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    font-weight: 750; font-size: 1.05rem; letter-spacing: .02em; transition: transform .12s, box-shadow .12s;
+  }
+  .type:hover { transform: translateY(-3px); }
+  .type svg { width: 42px; height: 42px; }
+  .type[data-type="PANNE"] { --c: var(--panne); }
+  .type[data-type="MACHINE A CAFE"] { --c: var(--cafe); }
+  .type[data-type="ENTRETIEN"] { --c: var(--entretien); }
+  .type[data-type="LIVRAISON"] { --c: var(--livraison); }
+
+  /* Formulaire */
+  .entete-form { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .pastille { background: var(--accent); color: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 700; display: inline-flex; gap: 8px; align-items: center; }
+  .pastille svg { width: 20px; height: 20px; }
+  .entete-form .btn-changer { margin-left: auto; background: none; border: 0; color: var(--doux); text-decoration: underline; cursor: pointer; }
+  .bloc { margin-bottom: 20px; }
+
+  .recherche { position: relative; }
+  .liste-cafes {
+    list-style: none; margin: 8px 0 0; padding: 6px; border: 1.5px solid var(--bord); border-radius: 12px;
+    max-height: 260px; overflow-y: auto; background: #fff;
+  }
+  .liste-cafes li { padding: 10px 12px; border-radius: 9px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+  .liste-cafes li:hover, .liste-cafes li.actif { background: color-mix(in srgb, var(--accent) 10%, #fff); }
+  .liste-cafes li .ville { color: var(--doux); font-size: .88rem; text-align: right; }
+  .liste-cafes .vide { color: var(--doux); cursor: default; }
+  .choisi {
+    display: flex; align-items: center; gap: 12px; border: 2px solid var(--accent); border-radius: 12px; padding: 12px 14px;
+    background: color-mix(in srgb, var(--accent) 7%, #fff);
+  }
+  .choisi strong { display: block; }
+  .choisi span { color: var(--doux); font-size: .9rem; }
+  .choisi button { margin-left: auto; background: none; border: 0; color: var(--doux); text-decoration: underline; cursor: pointer; }
+
+  .puces { display: flex; flex-wrap: wrap; gap: 8px; }
+  .puce {
+    border: 1.5px solid var(--bord); background: #fff; border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 600; font-size: .92rem;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .puce[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .puce.speciale { border-style: dashed; }
+  textarea { min-height: 96px; resize: vertical; }
+
+  .chargement { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: tourne .8s linear infinite; }
+  @keyframes tourne { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: #17642c; color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: var(--ombre);
+    font-weight: 650; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <h1>Service technique<small>Encodage des interventions</small></h1>
+  <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
+</header>
+
+<main>
+  <!-- Écran 1 : connexion -->
+  <section id="ecran-connexion" class="cache">
+    <form id="form-connexion" class="boite" autocomplete="off">
+      <h2>Connexion</h2>
+      <p class="aide">Entrez le mot de passe du service technique.</p>
+      <label class="champ" for="mdp">Mot de passe</label>
+      <input id="mdp" type="password" autocomplete="current-password" required>
+      <label class="case"><input id="rester" type="checkbox"> Rester connecté sur cet appareil</label>
+      <button id="btn-connexion" class="btn" type="submit">Se connecter</button>
+      <div id="msg-connexion"></div>
+    </form>
+  </section>
+
+  <!-- Écran 2 : encodage -->
+  <section id="ecran-encodage" class="cache">
+    <div id="choix-type">
+      <h2>Nouvelle intervention</h2>
+      <p class="aide">Choisissez le type d'intervention.</p>
+      <div class="types">
+        <button class="type" type="button" data-type="PANNE"><span class="ico" data-ico="PANNE"></span>PANNE</button>
+        <button class="type" type="button" data-type="MACHINE A CAFE"><span class="ico" data-ico="MACHINE A CAFE"></span>MACHINE À CAFÉ</button>
+        <button class="type" type="button" data-type="ENTRETIEN"><span class="ico" data-ico="ENTRETIEN"></span>ENTRETIEN</button>
+        <button class="type" type="button" data-type="LIVRAISON"><span class="ico" data-ico="LIVRAISON"></span>LIVRAISON</button>
+      </div>
+      <div id="msg-cafes"></div>
+    </div>
+
+    <form id="form-envoi" class="boite cache" autocomplete="off">
+      <div class="entete-form">
+        <span id="pastille" class="pastille"></span>
+        <button id="btn-changer" class="btn-changer" type="button">Changer de type</button>
+      </div>
+
+      <div class="bloc">
+        <label class="champ" for="recherche">Café / salle</label>
+        <div id="zone-recherche" class="recherche">
+          <input id="recherche" type="search" placeholder="Rechercher un nom ou une ville…" role="combobox" aria-expanded="true" aria-controls="liste-cafes" autocomplete="off">
+          <ul id="liste-cafes" class="liste-cafes" role="listbox"></ul>
+        </div>
+        <div id="cafe-choisi" class="choisi cache">
+          <div><strong id="cafe-nom"></strong><span id="cafe-ville"></span></div>
+          <button id="btn-autre-cafe" type="button">Changer</button>
+        </div>
+      </div>
+
+      <div id="bloc-machines" class="bloc cache">
+        <label class="champ">Machine(s) concernée(s)</label>
+        <p class="aide" style="margin-bottom:10px">INDETERMINE si vous ne savez pas encore. Plusieurs choix possibles.</p>
+        <div id="puces-machines" class="puces"></div>
+      </div>
+
+      <div class="bloc">
+        <label class="champ" for="nature">Nature de la panne <span style="font-weight:400;color:var(--doux)">(facultatif)</span></label>
+        <textarea id="nature" maxlength="500" placeholder="Décrivez le problème…"></textarea>
+      </div>
+
+      <button id="btn-envoyer" class="btn" type="submit">Envoyer</button>
+      <div id="msg-envoi"></div>
+    </form>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // URL du script Google (déploiement « Application Web », finit par /exec).
+  const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxh_B8_LeDhOZ-Gzufb1b0rygihEjs1MRibNG6n368xVQzUi4LCh9cPJv5tjChQ69o/exec';
+
+  // Liste recopiée depuis AppSheet (colonne « Appareils café »),
+  // sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
+  const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
+    'ACTION PACK', 'TOP MACHINE', 'GREYHOUND', 'TEXAS', 'KICKER', 'BILLARD', 'FLECHE', 'AUTRE'];
+
+  const COULEURS = { 'PANNE': '#e53935', 'MACHINE A CAFE': '#8e44ad', 'ENTRETIEN': '#1e88e5', 'LIVRAISON': '#2ea043' };
+  const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison' };
+  const ICONES = {
+    'PANNE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
+    'MACHINE A CAFE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v3M12 2v3"/></svg>',
+    'ENTRETIEN': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    'LIVRAISON': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4h14v12H1z"/><path d="M15 9h4l3 3v4h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>'
+  };
+  const MESSAGES = {
+    mot_de_passe: 'Mot de passe incorrect.',
+    bloque: 'Trop d’essais, réessayez dans 10 minutes.',
+    cafe_inconnu: 'Ce café n’a pas été trouvé dans la liste. Rechargez la page et réessayez.',
+    type_invalide: 'Type d’intervention invalide.',
+    colonne_manquante: 'La feuille a changé (colonne manquante). Prévenez Marc.',
+    erreur_serveur: 'Erreur du serveur. Réessayez dans un instant.',
+    action_inconnue: 'Action inconnue.',
+    reseau: 'Connexion impossible. Vérifiez le réseau.'
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']), envoiEnCours: false };
+
+  /* ---------- Stockage du mot de passe ---------- */
+  const CLE = 'pannes_mdp';
+  function lireMdp() {
+    try { return localStorage.getItem(CLE) || sessionStorage.getItem(CLE) || ''; } catch (e) { return ''; }
+  }
+  function garderMdp(mdp, rester) {
+    try {
+      localStorage.removeItem(CLE); sessionStorage.removeItem(CLE);
+      (rester ? localStorage : sessionStorage).setItem(CLE, mdp);
+    } catch (e) { /* stockage indisponible : la session reste en mémoire */ }
+  }
+  function oublierMdp() {
+    try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); } catch (e) {}
+  }
+
+  /* ---------- Appels au script ---------- */
+  async function appeler(corps) {
+    let rep;
+    try {
+      rep = await fetch(URL_SCRIPT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({}, corps, { motdepasse: etat.motdepasse })),
+        cache: 'no-store',
+        redirect: 'follow'
+      });
+    } catch (e) {
+      return { ok: false, erreur: 'reseau' };
+    }
+    if (!rep.ok) return { ok: false, erreur: 'reseau' };
+    try { return await rep.json(); } catch (e) { return { ok: false, erreur: 'erreur_serveur' }; }
+  }
+
+  /* ---------- Messages ---------- */
+  function message(zone, type, texte, reessayer) {
+    const el = $(zone);
+    el.innerHTML = '';
+    if (!texte) return;
+    const div = document.createElement('div');
+    div.className = 'message ' + type;
+    const span = document.createElement('span');
+    span.textContent = texte;
+    div.appendChild(span);
+    if (reessayer) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = 'Réessayer';
+      b.addEventListener('click', reessayer);
+      div.appendChild(b);
+    }
+    el.appendChild(div);
+  }
+  let minuteurToast;
+  function toast(texte) {
+    const t = $('toast');
+    t.textContent = texte;
+    t.classList.add('visible');
+    clearTimeout(minuteurToast);
+    minuteurToast = setTimeout(() => t.classList.remove('visible'), 4500);
+  }
+  function occupe(btn, oui, texte) {
+    btn.disabled = oui;
+    btn.innerHTML = '';
+    if (oui) { const s = document.createElement('span'); s.className = 'chargement'; btn.appendChild(s); }
+    btn.appendChild(document.createTextNode(texte));
+  }
+
+  /* ---------- Écrans ---------- */
+  function afficherConnexion(erreur) {
+    $('ecran-encodage').classList.add('cache');
+    $('btn-deconnexion').classList.add('cache');
+    $('ecran-connexion').classList.remove('cache');
+    $('mdp').value = '';
+    message('msg-connexion', 'erreur', erreur ? MESSAGES[erreur] || MESSAGES.erreur_serveur : '');
+    setTimeout(() => $('mdp').focus(), 50);
+  }
+  function afficherEncodage() {
+    $('ecran-connexion').classList.add('cache');
+    $('ecran-encodage').classList.remove('cache');
+    $('btn-deconnexion').classList.remove('cache');
+    revenirAuxTypes();
+  }
+
+  /* ---------- Connexion ---------- */
+  async function chargerCafes(btn) {
+    if (btn) occupe(btn, true, 'Connexion…');
+    const r = await appeler({ action: 'cafes' });
+    if (btn) occupe(btn, false, 'Se connecter');
+    if (r.ok) {
+      etat.cafes = (r.cafes || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+      return { ok: true };
+    }
+    return r;
+  }
+
+  $('form-connexion').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = $('btn-connexion');
+    if (btn.disabled) return;
+    const mdp = $('mdp').value;
+    if (!mdp) return;
+    etat.motdepasse = mdp;
+    message('msg-connexion', '', '');
+    const r = await chargerCafes(btn);
+    if (r.ok) {
+      garderMdp(mdp, $('rester').checked);
+      afficherEncodage();
+    } else if (r.erreur === 'reseau') {
+      message('msg-connexion', 'erreur', MESSAGES.reseau, () => $('form-connexion').requestSubmit());
+    } else {
+      etat.motdepasse = '';
+      message('msg-connexion', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+    }
+  });
+
+  $('btn-deconnexion').addEventListener('click', () => {
+    oublierMdp();
+    etat.motdepasse = ''; etat.cafes = [];
+    afficherConnexion();
+  });
+
+  /* ---------- Choix du type ---------- */
+  document.querySelectorAll('[data-ico]').forEach((s) => { s.innerHTML = ICONES[s.dataset.ico]; });
+  document.querySelectorAll('.type').forEach((b) => b.addEventListener('click', () => choisirType(b.dataset.type)));
+
+  function choisirType(type) {
+    if (!etat.cafes.length) {
+      message('msg-cafes', 'erreur', 'La liste des cafés n’est pas chargée.', recharger);
+      return;
+    }
+    etat.type = type;
+    document.documentElement.style.setProperty('--accent', COULEURS[type]);
+    $('pastille').innerHTML = ICONES[type];
+    $('pastille').appendChild(document.createTextNode(LIBELLES[type]));
+    $('bloc-machines').classList.toggle('cache', type !== 'PANNE');
+    $('choix-type').classList.add('cache');
+    $('form-envoi').classList.remove('cache');
+    message('msg-envoi', '', '');
+    if (!etat.cafe) { $('recherche').value = ''; filtrer(); setTimeout(() => $('recherche').focus(), 50); }
+  }
+
+  function revenirAuxTypes() {
+    etat.type = ''; etat.cafe = null;
+    etat.machines = new Set(['INDETERMINE']);
+    dessinerMachines();
+    $('nature').value = '';
+    $('recherche').value = '';
+    afficherCafeChoisi();
+    document.documentElement.style.setProperty('--accent', '#111827');
+    $('form-envoi').classList.add('cache');
+    $('choix-type').classList.remove('cache');
+    message('msg-cafes', '', '');
+  }
+  $('btn-changer').addEventListener('click', () => {
+    const cafe = etat.cafe;
+    revenirAuxTypes();
+    etat.cafe = cafe; afficherCafeChoisi();
+  });
+
+  async function recharger() {
+    message('msg-cafes', '', 'Chargement…');
+    const r = await chargerCafes();
+    if (r.ok) { message('msg-cafes', 'ok', 'Liste des cafés chargée.'); }
+    else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') { oublierMdp(); afficherConnexion(r.erreur); }
+    else message('msg-cafes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, recharger);
+  }
+
+  /* ---------- Recherche des cafés ---------- */
+  const normaliser = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  let actif = -1;
+
+  function filtrer() {
+    const q = normaliser($('recherche').value).trim();
+    const mots = q.split(/\s+/).filter(Boolean);
+    const res = etat.cafes.filter((c) => {
+      const txt = normaliser(c.nom + ' ' + c.ville);
+      return mots.every((m) => txt.includes(m));
+    }).slice(0, 80);
+    const ul = $('liste-cafes');
+    ul.innerHTML = '';
+    actif = res.length ? 0 : -1;
+    if (!res.length) {
+      const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li);
+      return;
+    }
+    res.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      if (i === 0) li.classList.add('actif');
+      const n = document.createElement('span'); n.textContent = c.nom;
+      const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
+      li.append(n, v);
+      li.addEventListener('click', () => choisirCafe(c));
+      li._cafe = c;
+      ul.appendChild(li);
+    });
+  }
+  $('recherche').addEventListener('input', filtrer);
+  $('recherche').addEventListener('keydown', (ev) => {
+    const items = [...$('liste-cafes').querySelectorAll('li[role=option]')];
+    if (!items.length) return;
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      items[actif] && items[actif].classList.remove('actif');
+      actif = (actif + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[actif].classList.add('actif');
+      items[actif].scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      if (items[actif]) choisirCafe(items[actif]._cafe);
+    }
+  });
+
+  function choisirCafe(c) {
+    etat.cafe = c;
+    afficherCafeChoisi();
+    message('msg-envoi', '', '');
+  }
+  function afficherCafeChoisi() {
+    const c = etat.cafe;
+    $('zone-recherche').classList.toggle('cache', !!c);
+    $('cafe-choisi').classList.toggle('cache', !c);
+    if (c) { $('cafe-nom').textContent = c.nom; $('cafe-ville').textContent = c.ville; }
+  }
+  $('btn-autre-cafe').addEventListener('click', () => {
+    etat.cafe = null; afficherCafeChoisi();
+    $('recherche').value = ''; filtrer(); $('recherche').focus();
+  });
+
+  /* ---------- Machines (PANNE uniquement) ---------- */
+  function dessinerMachines() {
+    const zone = $('puces-machines');
+    zone.innerHTML = '';
+    MACHINES.forEach((m) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'puce' + (m === 'INDETERMINE' || m === 'AUTRE' ? ' speciale' : '');
+      b.textContent = m;
+      b.setAttribute('aria-pressed', etat.machines.has(m) ? 'true' : 'false');
+      b.addEventListener('click', () => basculerMachine(m));
+      zone.appendChild(b);
+    });
+  }
+  function basculerMachine(m) {
+    const s = etat.machines;
+    if (m === 'INDETERMINE') { s.clear(); s.add('INDETERMINE'); }
+    else {
+      if (s.has(m)) s.delete(m); else { s.add(m); s.delete('INDETERMINE'); }
+      if (!s.size) s.add('INDETERMINE');
+    }
+    dessinerMachines();
+  }
+
+  /* ---------- Envoi ---------- */
+  $('form-envoi').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (etat.envoiEnCours) return;
+    if (!etat.cafe) { message('msg-envoi', 'erreur', 'Choisissez un café dans la liste.'); $('recherche').focus(); return; }
+
+    const appareil = etat.type === 'PANNE' ? MACHINES.filter((m) => etat.machines.has(m)).join(' , ') : '';
+    const corps = {
+      action: 'envoyer', type: etat.type,
+      licence: etat.cafe.licence, nom: etat.cafe.nom,
+      appareil: appareil, nature: $('nature').value.trim()
+    };
+
+    etat.envoiEnCours = true;
+    const btn = $('btn-envoyer');
+    occupe(btn, true, 'Envoi en cours…');
+    message('msg-envoi', '', '');
+    const r = await appeler(corps);
+    etat.envoiEnCours = false;
+    occupe(btn, false, 'Envoyer');
+
+    if (r.ok) {
+      const resume = LIBELLES[etat.type] + ' – ' + etat.cafe.nom;
+      revenirAuxTypes();
+      message('msg-cafes', 'ok', 'Enregistré : ' + resume + '.');
+      toast('✓ Enregistré : ' + resume);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      oublierMdp(); afficherConnexion(r.erreur);
+    } else if (r.erreur === 'reseau' || r.erreur === 'erreur_serveur') {
+      message('msg-envoi', 'erreur', MESSAGES[r.erreur] + ' Votre saisie est conservée : vous pouvez réessayer.', () => $('form-envoi').requestSubmit());
+    } else {
+      message('msg-envoi', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+    }
+  });
+
+  /* ---------- Démarrage ---------- */
+  async function demarrer() {
+    etat.motdepasse = lireMdp();
+    if (!etat.motdepasse) { afficherConnexion(); return; }
+    const r = await chargerCafes();
+    if (r.ok) afficherEncodage();
+    else if (r.erreur === 'reseau') {
+      afficherEncodage();
+      message('msg-cafes', 'erreur', MESSAGES.reseau, recharger);
+    } else { oublierMdp(); etat.motdepasse = ''; afficherConnexion(r.erreur); }
+  }
+  dessinerMachines();
+  demarrer();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>
