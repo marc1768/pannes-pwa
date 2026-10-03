@@ -331,8 +331,9 @@
     if (btn) occupe(btn, true, 'Connexion…');
     const r = await appeler({ action: 'cafes' });
     if (btn) occupe(btn, false, 'Se connecter');
+    if (r.ok && !Array.isArray(r.cafes)) return { ok: false, erreur: 'erreur_serveur' };
     if (r.ok) {
-      etat.cafes = (r.cafes || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+      etat.cafes = r.cafes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
       return { ok: true };
     }
     return r;
@@ -516,7 +517,8 @@
     etat.envoiEnCours = false;
     occupe(btn, false, 'Envoyer');
 
-    if (r.ok) {
+    // Succès uniquement si le script confirme le numéro de la ligne écrite.
+    if (r.ok && r.ligne) {
       const resume = LIBELLES[etat.type] + ' – ' + etat.cafe.nom;
       revenirAuxTypes();
       message('msg-cafes', 'ok', 'Enregistré : ' + resume + '.');
@@ -526,6 +528,8 @@
       oublierMdp(); afficherConnexion(r.erreur);
     } else if (r.erreur === 'reseau' || r.erreur === 'erreur_serveur') {
       message('msg-envoi', 'erreur', MESSAGES[r.erreur] + ' Votre saisie est conservée : vous pouvez réessayer.', () => $('form-envoi').requestSubmit());
+    } else if (r.ok) {
+      message('msg-envoi', 'erreur', 'Réponse inattendue du serveur : l’enregistrement n’est pas confirmé. Vérifiez la liste AppSheet avant de renvoyer.');
     } else {
       message('msg-envoi', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
     }
