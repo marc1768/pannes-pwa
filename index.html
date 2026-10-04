@@ -134,12 +134,37 @@
   .maj { color: var(--doux); font-size: .85rem; margin: 0 0 14px; }
   .groupe { color: var(--doux); font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
   .inter {
-    display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center;
+    display: flex; gap: 12px; align-items: flex-start;
     background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--c);
-    border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+    border-radius: 14px; padding: 12px 8px 12px 14px; margin-bottom: 10px; transition: opacity .2s;
   }
-  .inter .badge { grid-row: span 3; align-self: start; background: color-mix(in srgb, var(--c) 78%, #000); color: #fff; border-radius: 10px; padding: 6px 8px; font-size: .75rem; font-weight: 800; text-align: center; min-width: 86px; }
+  .inter.en-annulation { opacity: .55; }
+  .inter .badge { flex: none; background: color-mix(in srgb, var(--c) 78%, #000); color: #fff; border-radius: 10px; padding: 6px 8px; font-size: .75rem; font-weight: 800; text-align: center; min-width: 86px; }
+  .inter .contenu { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .inter .cafe { font-weight: 750; font-size: 1.02rem; }
+  .inter .machines { color: var(--texte); font-size: .9rem; font-weight: 650; }
+  .inter .nature {
+    color: var(--doux); font-size: .9rem; font-style: italic; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  /* Poubelle : cible tactile 48 px, séparée du contenu par un trait */
+  .inter .poubelle {
+    flex: none; align-self: center; width: 48px; height: 48px; margin-left: 4px; padding: 0;
+    display: grid; place-items: center; border: 0; border-left: 1px solid var(--bord); border-radius: 0 10px 10px 0;
+    background: transparent; color: var(--doux); cursor: pointer;
+  }
+  .inter .poubelle:hover, .inter .poubelle:focus-visible { color: var(--err-texte); background: var(--err-fond); outline: none; }
+  .inter .poubelle svg { width: 22px; height: 22px; }
+  .inter .poubelle:disabled { cursor: wait; }
+
+  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: grid; place-items: center; padding: 16px; z-index: 50; }
+  .dialogue { background: var(--carte); border: 1px solid var(--bord); border-radius: var(--rayon); box-shadow: var(--ombre); padding: 22px; width: 100%; max-width: 420px; }
+  .dialogue h3 { margin: 0 0 8px; font-size: 1.15rem; }
+  .dialogue p { margin: 0 0 20px; color: var(--doux); }
+  .dialogue .boutons { display: flex; gap: 12px; }
+  .dialogue .boutons button { flex: 1; min-height: 48px; border-radius: 12px; font-weight: 750; cursor: pointer; border: 1px solid var(--bord); }
+  .dialogue .oui { background: var(--panne); color: #fff; border-color: var(--panne) !important; }
+  .dialogue .non { background: var(--carte2); color: var(--texte); }
   .inter .cafe span { color: var(--doux); font-weight: 400; }
   .inter .qui { color: var(--texte); font-size: .92rem; }
   .inter .depuis { color: var(--doux); font-size: .88rem; }
@@ -228,12 +253,24 @@
         <button id="btn-actualiser" class="btn-lien" type="button">Actualiser</button>
       </div>
       <p id="maj-encours" class="maj">Chargement…</p>
+      <div id="msg-encours"></div>
       <div id="liste-encours"></div>
     </section>
   </section>
 </main>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="voile-annuler" class="voile cache">
+  <div class="dialogue" role="alertdialog" aria-modal="true" aria-labelledby="dlg-titre" aria-describedby="dlg-texte">
+    <h3 id="dlg-titre">Annuler cette intervention ?</h3>
+    <p id="dlg-texte"></p>
+    <div class="boutons">
+      <button id="dlg-non" class="non" type="button">Non</button>
+      <button id="dlg-oui" class="oui" type="button">Oui, annuler</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -256,6 +293,7 @@
     'PANNE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
     'MACHINE A CAFE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v3M12 2v3"/></svg>',
     'ENTRETIEN': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    'POUBELLE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
     'LIVRAISON': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4h14v12H1z"/><path d="M15 9h4l3 3v4h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>'
   };
   const MESSAGES = {
@@ -267,12 +305,16 @@
     erreur_serveur: 'Erreur du serveur.',
     action_inconnue: 'Action inconnue.',
     reseau: 'Pas de connexion au serveur.',
+    deja_terminee: 'Cette intervention est déjà terminée.',
+    deja_annulee: 'Cette intervention était déjà annulée.',
+    intervention_introuvable: 'Intervention introuvable : elle a peut-être été modifiée. La liste a été actualisée.',
     delai: 'Le serveur ne répond pas.'
   };
 
   const $ = (id) => document.getElementById(id);
   const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']),
-                 envoiEnCours: false, envoi: null, encours: null, encoursRecu: 0, encoursDecalage: 0 };
+                 envoiEnCours: false, envoi: null, encours: null, encoursRecu: 0, encoursDecalage: 0,
+                 annulations: new Map(), masquees: new Set() };
 
   /* ---------- Stockage du mot de passe ---------- */
   const CLE = 'pannes_mdp';
@@ -576,6 +618,8 @@
     chargementEncours = false;
     if (r.ok && Array.isArray(r.interventions)) {
       etat.encours = r.interventions;
+      const presentes = new Set(r.interventions.map(cleInter));
+      etat.masquees.forEach((k) => { if (!presentes.has(k)) etat.masquees.delete(k); });
       etat.encoursRecu = Date.now();
       // Décalage entre l'heure de Bruxelles du serveur et l'horloge de l'appareil.
       etat.encoursDecalage = r.maintenant ? Date.now() - lireHeure(r.maintenant) : 0;
@@ -609,9 +653,10 @@
     }
     maj.textContent = 'Mise à jour : ' + heureCourte(etat.encoursRecu) + (echec ? ' (dernière actualisation impossible, nouvel essai dans 1 minute)' : '');
     zone.innerHTML = '';
-    const enCours = etat.encours.filter((i) => i.statut === 'En cours')
+    const visibles = etat.encours.filter((i) => !etat.masquees.has(cleInter(i)));
+    const enCours = visibles.filter((i) => i.statut === 'En cours')
       .sort((a, b) => nomTechnicien(a.technicien).localeCompare(nomTechnicien(b.technicien), 'fr') || (a.debut || a.horodateur).localeCompare(b.debut || b.horodateur));
-    const enAttente = etat.encours.filter((i) => i.statut === 'En attente')
+    const enAttente = visibles.filter((i) => i.statut === 'En attente')
       .sort((a, b) => a.horodateur.localeCompare(b.horodateur));
     if (!enCours.length && !enAttente.length) {
       const p = document.createElement('p'); p.className = 'vide-encours'; p.textContent = 'Aucune intervention en attente ou en cours.'; zone.appendChild(p); return;
@@ -626,16 +671,97 @@
     enAttente.forEach((i) => zone.appendChild(carte(i, 'Non prise', 'En attente depuis ' + depuis(i.horodateur))));
   }
   function titreGroupe(zone, texte) { const h = document.createElement('div'); h.className = 'groupe'; h.textContent = texte; zone.appendChild(h); }
+  const cleInter = (i) => i.ligne + '|' + i.horodateur;
+  const nomMachine = (m) => m.toUpperCase() === 'INDETERMINE' ? 'Machine à déterminer' : m;
   function carte(i, qui, quand) {
     const d = document.createElement('div');
     d.className = 'inter'; d.dataset.type = i.type;
     const b = document.createElement('div'); b.className = 'badge'; b.textContent = (LIBELLES[i.type] || i.type).toUpperCase();
+    const contenu = document.createElement('div'); contenu.className = 'contenu';
     const c = document.createElement('div'); c.className = 'cafe'; c.textContent = i.cafe + ' ';
     const v = document.createElement('span'); v.textContent = '· ' + i.ville; c.appendChild(v);
+    contenu.appendChild(c);
+    if (i.type === 'PANNE') {
+      const m = document.createElement('div'); m.className = 'machines';
+      const liste = String(i.appareil || '').split(/\s*,\s*/).filter(Boolean).map(nomMachine);
+      m.textContent = liste.length ? liste.join(' · ') : 'Machine à déterminer';
+      contenu.appendChild(m);
+    }
+    if (i.nature) {
+      const n = document.createElement('div'); n.className = 'nature'; n.textContent = i.nature; n.title = i.nature;
+      contenu.appendChild(n);
+    }
     const q = document.createElement('div'); q.className = 'qui'; q.textContent = qui;
     const t = document.createElement('div'); t.className = 'depuis'; t.textContent = quand;
-    d.append(b, c, q, t);
+    contenu.append(q, t);
+    const p = document.createElement('button');
+    p.type = 'button'; p.className = 'poubelle';
+    p.setAttribute('aria-label', 'Annuler l’intervention ' + i.cafe);
+    const enCours = etat.annulations.has(cleInter(i));
+    if (enCours) { d.classList.add('en-annulation'); p.disabled = true; p.innerHTML = '<span class="chargement"></span>'; }
+    else { p.innerHTML = ICONES.POUBELLE; p.addEventListener('click', () => demanderAnnulation(i)); }
+    d.append(b, contenu, p);
     return d;
+  }
+
+  /* ---------- Annulation d'une intervention ---------- */
+  // Même principe que l'envoi : un identifiant unique, réutilisé à chaque nouvel essai.
+  let aConfirmer = null;
+  function demanderAnnulation(i) {
+    if (etat.annulations.has(cleInter(i))) return;
+    aConfirmer = i;
+    $('dlg-texte').textContent = i.cafe + ' – ' + (LIBELLES[i.type] || i.type);
+    $('voile-annuler').classList.remove('cache');
+    setTimeout(() => $('dlg-non').focus(), 30);
+  }
+  function fermerDialogue() { $('voile-annuler').classList.add('cache'); aConfirmer = null; }
+  $('dlg-non').addEventListener('click', fermerDialogue);
+  $('voile-annuler').addEventListener('click', (ev) => { if (ev.target === $('voile-annuler')) fermerDialogue(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && aConfirmer) fermerDialogue(); });
+  $('dlg-oui').addEventListener('click', () => { const i = aConfirmer; fermerDialogue(); if (i) annulerIntervention(i); });
+
+  function licencePour(i) {
+    const n = String(i.cafe).toUpperCase(), v = String(i.ville).toUpperCase();
+    const t = etat.cafes.filter((c) => c.nom.toUpperCase() === n && c.ville.toUpperCase() === v);
+    return t.length === 1 ? t[0].licence : '';   // seulement si le café est identifié sans ambiguïté
+  }
+
+  async function annulerIntervention(i, demandeExistante) {
+    const cle = cleInter(i);
+    const demande = demandeExistante || { action: 'annuler', id: nouvelId(), ligne: i.ligne, horodateur: i.horodateur,
+                                          nom: i.cafe, licence: licencePour(i) };
+    etat.annulations.set(cle, demande);
+    message('msg-encours', '', '');
+    afficherEnCours();
+    const t0 = performance.now();
+    let r = await appeler(demande, DELAI_ENVOI_MS);
+    // Réponse perdue : on redemande avec le MÊME identifiant ; le script renvoie le résultat déjà obtenu.
+    for (let essai = 0; essai < 5 && !r.ok && (r.erreur === 'reseau' || r.erreur === 'delai' || r.erreur === 'erreur_serveur'); essai++) {
+      await pause(2000);
+      r = await appeler(demande, DELAI_ENVOI_MS);
+    }
+    etat.annulations.delete(cle);
+    console.info('[PWA] annulation ' + demande.id + ' : ' + JSON.stringify(r) + ' en ' + Math.round(performance.now() - t0) + ' ms');
+    if (r.ok || r.erreur === 'deja_annulee') {
+      etat.masquees.add(cle);
+      afficherEnCours();
+      const texte = r.ok ? 'Intervention annulée : ' + i.cafe + ' – ' + (LIBELLES[i.type] || i.type) + '.' : MESSAGES.deja_annulee;
+      message('msg-encours', 'ok', texte);
+      toast('✓ ' + texte);
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      oublierMdp(); afficherConnexion(r.erreur);
+    } else if (r.erreur === 'deja_terminee' || r.erreur === 'intervention_introuvable') {
+      afficherEnCours();
+      message('msg-encours', 'info', MESSAGES[r.erreur]);
+      chargerEnCours();
+    } else if (r.erreur === 'reseau' || r.erreur === 'delai') {
+      afficherEnCours();
+      message('msg-encours', 'erreur', 'Impossible de joindre le serveur : l’annulation de ' + i.cafe + ' n’est pas confirmée. Rien ne sera fait en double.',
+              'Réessayer', () => annulerIntervention(i, demande));
+    } else {
+      afficherEnCours();
+      message('msg-encours', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', () => annulerIntervention(i, demande));
+    }
   }
 
   /* ---------- Démarrage ---------- */

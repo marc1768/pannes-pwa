@@ -1,7 +1,7 @@
 // Service worker PWA Pannes
 // Met en cache UNIQUEMENT les fichiers de l'interface (même origine).
 // Les appels au script Google (script.google.com / googleusercontent.com) ne sont jamais interceptés.
-const VERSION = 'pannes-v3';
+const VERSION = 'pannes-v4';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
