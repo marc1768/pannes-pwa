@@ -108,6 +108,9 @@
   .liste-cafes li:hover, .liste-cafes li.actif { background: color-mix(in srgb, var(--accent) 22%, var(--fond)); }
   .liste-cafes li .ville { color: var(--doux); font-size: .88rem; text-align: right; }
   .liste-cafes .vide { color: var(--doux); cursor: default; }
+  .liste-cafes li.attente-cafes { align-items: center; justify-content: flex-start; gap: 10px; }
+  .attente-cafes .chargement { width: 16px; height: 16px; flex: none; }
+  .liste-cafes .btn-reessayer { margin-left: auto; flex: none; background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 9px; padding: 6px 10px; cursor: pointer; font-weight: 650; }
   .choisi {
     display: flex; align-items: center; gap: 12px; border: 2px solid var(--accent); border-radius: 12px; padding: 12px 14px;
     background: color-mix(in srgb, var(--accent) 14%, var(--fond));
@@ -213,6 +216,7 @@
         <button class="type" type="button" data-type="LIVRAISON"><span class="ico" data-ico="LIVRAISON"></span>LIVRAISON</button>
       </div>
       <div id="msg-cafes"></div>
+      <div id="etat-cafes"></div>
     </div>
 
     <form id="form-envoi" class="boite cache" autocomplete="off">
@@ -284,6 +288,7 @@
   const DELAI_LECTURE_MS = 25000;   // lectures (cafés, interventions) : Google répond parfois en 5 à 11 s
   const RAFRAICHIR_MS = 60000;
   const ALERTE_APRES_MS = 180000;   // alerte discrète après 3 minutes sans lecture réussie
+  const REESSAYER_APRES_MS = 15000; // premier chargement sans liste : bouton « Réessayer » après 15 s
 
   // Liste recopiée depuis AppSheet (colonne « Appareils café »), sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
@@ -324,7 +329,29 @@
   function garderMdp(mdp, rester) {
     try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); (rester ? localStorage : sessionStorage).setItem(CLE, mdp); } catch (e) {}
   }
-  function oublierMdp() { try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); } catch (e) {} }
+  function oublierMdp() { try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); } catch (e) {} oublierCafes(); }
+
+  /* ---------- Liste des cafés conservée sur l'appareil ---------- */
+  // Dernière liste reçue + son heure, dans le même stockage que le mot de passe
+  // (localStorage si « Rester connecté », sinon sessionStorage). Effacée à la déconnexion.
+  const CLE_CAFES = 'pannes_cafes';
+  function lireCafesStockes() {
+    for (const s of [localStorage, sessionStorage]) {
+      try {
+        const o = JSON.parse(s.getItem(CLE_CAFES) || 'null');
+        if (o && Array.isArray(o.cafes) && o.cafes.length) return o;
+      } catch (e) {}
+    }
+    return null;
+  }
+  function garderCafes(cafes) {
+    try {
+      const s = localStorage.getItem(CLE) ? localStorage : sessionStorage;
+      localStorage.removeItem(CLE_CAFES); sessionStorage.removeItem(CLE_CAFES);
+      s.setItem(CLE_CAFES, JSON.stringify({ recue: new Date().toISOString(), cafes: cafes }));
+    } catch (e) {}
+  }
+  function oublierCafes() { try { localStorage.removeItem(CLE_CAFES); sessionStorage.removeItem(CLE_CAFES); } catch (e) {} }
 
   function nouvelId() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -361,7 +388,10 @@
   // Les écritures (envoyer, annuler, statut) n'y passent pas : leur comportement ne change pas.
   let fileLectures = Promise.resolve();
   function lire(corps) {
+    const mdp = etat.motdepasse;
     const tache = fileLectures.then(async () => {
+      // Mot de passe refusé ou déconnexion entre-temps : on n'envoie pas (pas d'essai raté en plus).
+      if (etat.motdepasse !== mdp) return { ok: false, erreur: 'annule' };
       let r = await appeler(corps, DELAI_LECTURE_MS);
       if (!r.ok && (r.erreur === 'reseau' || r.erreur === 'delai' || r.erreur === 'erreur_serveur')) {
         await pause(3000);
@@ -427,13 +457,74 @@
   }
 
   /* ---------- Connexion ---------- */
+  function appliquerCafes(liste) { etat.cafes = liste.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')); }
+
   async function chargerCafes(btn) {
     if (btn) occupe(btn, true, 'Connexion…');
     const r = await lire({ action: 'cafes' });
     if (btn) occupe(btn, false, 'Se connecter');
     if (r.ok && !Array.isArray(r.cafes)) return { ok: false, erreur: 'erreur_serveur' };
-    if (r.ok) { etat.cafes = r.cafes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')); return { ok: true }; }
+    if (r.ok) { appliquerCafes(r.cafes); return { ok: true }; }
     return r;
+  }
+
+  // Mise à jour de la liste des cafés EN ARRIÈRE-PLAN (elle vérifie aussi le mot de passe enregistré).
+  // N'empêche jamais l'affichage. L'écran de connexion n'apparaît que si le script répond
+  // explicitement "mot_de_passe" ou "bloque" ; un délai dépassé ou une erreur réseau garde la
+  // liste précédente, sans message.
+  const suiviCafes = { promesse: null, debut: 0, echec: false, minuteur: null };
+  function rafraichirCafes(manuel) {
+    if (!etat.motdepasse) return Promise.resolve({ ok: false });
+    if (suiviCafes.promesse && !manuel) return suiviCafes.promesse;
+    const mdp = etat.motdepasse;
+    suiviCafes.debut = Date.now(); suiviCafes.echec = false;
+    clearTimeout(suiviCafes.minuteur);
+    suiviCafes.minuteur = setTimeout(afficherEtatCafes, REESSAYER_APRES_MS + 50);   // fait apparaître « Réessayer »
+    // « Réessayer » : appel direct, sans attendre dans la file des lectures.
+    const p = (manuel ? appeler({ action: 'cafes' }, DELAI_LECTURE_MS) : lire({ action: 'cafes' })).then((r) => {
+      if (suiviCafes.promesse === p) suiviCafes.promesse = null;
+      if (etat.motdepasse !== mdp) return r;               // déconnecté entre-temps : réponse ignorée
+      if (r.ok && Array.isArray(r.cafes) && r.cafes.length) {
+        appliquerCafes(r.cafes); garderCafes(r.cafes);
+      } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+        oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
+        $('liste-encours').innerHTML = '';
+        afficherConnexion(r.erreur);
+        return r;
+      } else if (!etat.cafes.length) {
+        suiviCafes.echec = true;                           // aucune liste du tout : on le montre, avec « Réessayer »
+      }
+      afficherEtatCafes();
+      return r;
+    });
+    suiviCafes.promesse = p;
+    afficherEtatCafes();
+    return p;
+  }
+
+  // Indicateur affiché UNIQUEMENT quand aucune liste n'est disponible (premier chargement) :
+  // sous les 4 cartes, et à la place de la liste dans le formulaire.
+  function indicateurCafes(element) {
+    const el = document.createElement(element);
+    el.className = element === 'li' ? 'vide attente-cafes' : 'message info attente-cafes';
+    const enCours = !!suiviCafes.promesse && !suiviCafes.echec;
+    if (enCours) { const s = document.createElement('span'); s.className = 'chargement'; el.appendChild(s); }
+    const t = document.createElement('span');
+    t.textContent = enCours ? 'Chargement de la liste des cafés…' : 'La liste des cafés n’est pas encore disponible (le serveur ne répond pas).';
+    el.appendChild(t);
+    if (!enCours || Date.now() - suiviCafes.debut >= REESSAYER_APRES_MS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn-reessayer'; b.textContent = 'Réessayer';
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); rafraichirCafes(true); });
+      el.appendChild(b);
+    }
+    return el;
+  }
+  function afficherEtatCafes() {
+    const zone = $('etat-cafes');
+    zone.innerHTML = '';
+    if (!etat.cafes.length && etat.motdepasse) zone.appendChild(indicateurCafes('div'));
+    if (!$('form-envoi').classList.contains('cache') && !etat.cafe) filtrer();
   }
 
   $('form-connexion').addEventListener('submit', async (ev) => {
@@ -445,7 +536,7 @@
     etat.motdepasse = mdp;
     message('msg-connexion', '', '');
     const r = await chargerCafes(btn);
-    if (r.ok) { garderMdp(mdp, $('rester').checked); afficherEncodage(); }
+    if (r.ok) { garderMdp(mdp, $('rester').checked); garderCafes(etat.cafes); afficherEncodage(); }
     else if (r.erreur === 'reseau' || r.erreur === 'delai') {
       message('msg-connexion', 'erreur', MESSAGES[r.erreur], 'Réessayer', () => $('form-connexion').requestSubmit());
     } else { etat.motdepasse = ''; message('msg-connexion', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur); }
@@ -453,7 +544,7 @@
 
   $('btn-deconnexion').addEventListener('click', () => {
     oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
-    $('liste-encours').innerHTML = '';
+    $('liste-encours').innerHTML = ''; $('etat-cafes').innerHTML = '';
     afficherConnexion();
   });
 
@@ -461,8 +552,9 @@
   document.querySelectorAll('[data-ico]').forEach((s) => { s.innerHTML = ICONES[s.dataset.ico]; });
   document.querySelectorAll('.type').forEach((b) => b.addEventListener('click', () => choisirType(b.dataset.type)));
 
+  // Le formulaire s'ouvre toujours tout de suite ; si la liste des cafés n'est pas encore là,
+  // un indicateur de chargement la remplace jusqu'à son arrivée.
   function choisirType(type) {
-    if (!etat.cafes.length) { message('msg-cafes', 'erreur', 'La liste des cafés n’est pas chargée.', 'Réessayer', rechargerCafes); return; }
     etat.type = type;
     document.documentElement.style.setProperty('--accent', COULEURS[type]);
     $('pastille').innerHTML = ICONES[type];
@@ -490,18 +582,15 @@
     const cafe = etat.cafe; revenirAuxTypes(); etat.cafe = cafe; afficherCafeChoisi();
   });
 
-  async function rechargerCafes() {
-    message('msg-cafes', 'info', 'Chargement…');
-    const r = await chargerCafes();
-    if (r.ok) message('msg-cafes', 'ok', 'Liste des cafés chargée.');
-    else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') { oublierMdp(); afficherConnexion(r.erreur); }
-    else message('msg-cafes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', rechargerCafes);
-  }
-
   /* ---------- Recherche des cafés ---------- */
   const normaliser = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let actif = -1;
   function filtrer() {
+    if (!etat.cafes.length) {
+      const ul0 = $('liste-cafes'); ul0.innerHTML = ''; actif = -1;
+      if (etat.motdepasse) ul0.appendChild(indicateurCafes('li'));
+      return;
+    }
     const mots = normaliser($('recherche').value).trim().split(/\s+/).filter(Boolean);
     const res = etat.cafes.filter((c) => { const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m)); }).slice(0, 80);
     const ul = $('liste-cafes'); ul.innerHTML = ''; actif = res.length ? 0 : -1;
@@ -636,7 +725,10 @@
   }
   document.addEventListener('visibilitychange', () => {
     if (!etat.suiviActif) return;
-    if (document.visibilityState === 'visible') { afficherEnCours(); chargerEnCours(); demarrerRafraichissement(); }
+    if (document.visibilityState === 'visible') {
+      if (!etat.cafes.length) rafraichirCafes();   // toujours pas de liste : nouvel essai à la reprise
+      afficherEnCours(); chargerEnCours(); demarrerRafraichissement();
+    }
     else arreterRafraichissement();
   });
   $('btn-actualiser').addEventListener('click', () => chargerEnCours(true));
@@ -815,13 +907,16 @@
   }
 
   /* ---------- Démarrage ---------- */
-  async function demarrer() {
+  // Affichage IMMÉDIAT : aucune attente du script. Les 4 cartes et le formulaire s'affichent
+  // avec la dernière liste de cafés enregistrée ; la liste (et le mot de passe) sont vérifiés
+  // ensuite en arrière-plan, puis les « Interventions en cours » se chargent.
+  function demarrer() {
     etat.motdepasse = lireMdp();
     if (!etat.motdepasse) { afficherConnexion(); return; }
-    const r = await chargerCafes();
-    if (r.ok) afficherEncodage();
-    else if (r.erreur === 'reseau' || r.erreur === 'delai') { afficherEncodage(); message('msg-cafes', 'erreur', MESSAGES[r.erreur], 'Réessayer', rechargerCafes); }
-    else { oublierMdp(); etat.motdepasse = ''; afficherConnexion(r.erreur); }
+    const stock = lireCafesStockes();
+    if (stock) appliquerCafes(stock.cafes);
+    rafraichirCafes();      // 1re lecture de la file : cafés (vérifie aussi le mot de passe)
+    afficherEncodage();     // affichage tout de suite ; « encours » passe en 2e dans la file
   }
   dessinerMachines();
   demarrer();
