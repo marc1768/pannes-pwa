@@ -5,31 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pannes – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#0b1016">
+<meta name="color-scheme" content="dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
-    --fond: #f3f4f8; --carte: #ffffff; --texte: #111827; --doux: #6b7280; --bord: #e5e7eb;
-    --sombre: #111827;
-    --panne: #e53935; --cafe: #8e44ad; --entretien: #1e88e5; --livraison: #2ea043;
-    --accent: var(--sombre);
-    --rayon: 18px; --ombre: 0 6px 24px rgba(17,24,39,.08);
+    color-scheme: dark;
+    --fond: #0b1016; --carte: #151d27; --carte2: #1c2633; --texte: #eef2f6; --doux: #a3b0bf; --bord: #2b3848;
+    --entete: #070b10;
+    --panne: #ef4444; --cafe: #a855f7; --entretien: #3b82f6; --livraison: #22c55e;
+    --accent: #e2e8f0;
+    --ok-fond: #0f2e1c; --ok-texte: #86efac; --err-fond: #3a1414; --err-texte: #fca5a5; --info-fond: #172338; --info-texte: #bfdbfe;
+    --rayon: 18px; --ombre: 0 8px 28px rgba(0,0,0,.45);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; }
+  html, body { margin: 0; background: var(--fond); }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--fond); color: var(--texte); min-height: 100vh;
+    color: var(--texte); min-height: 100vh; font-size: 16px;
     -webkit-tap-highlight-color: transparent;
   }
   button, input, textarea { font: inherit; color: inherit; }
   .cache { display: none !important; }
 
-  /* En-tête */
   header {
-    background: var(--sombre); color: #fff; padding: 14px 16px;
+    background: var(--entete); color: #fff; padding: 14px 16px; border-bottom: 1px solid var(--bord);
     padding-top: calc(14px + env(safe-area-inset-top));
     display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10;
   }
@@ -38,80 +40,77 @@
   .logo i:nth-child(1) { background: var(--panne); } .logo i:nth-child(2) { background: var(--cafe); }
   .logo i:nth-child(3) { background: var(--entretien); } .logo i:nth-child(4) { background: var(--livraison); }
   header h1 { font-size: 1.1rem; margin: 0; flex: 1; font-weight: 650; }
-  header h1 small { display: block; font-weight: 400; opacity: .7; font-size: .78rem; }
-  .btn-lien { background: rgba(255,255,255,.12); border: 0; color: #fff; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
-  .btn-lien:hover { background: rgba(255,255,255,.22); }
+  header h1 small { display: block; font-weight: 400; color: var(--doux); font-size: .8rem; }
+  .btn-lien { background: var(--carte2); border: 1px solid var(--bord); color: var(--texte); padding: 8px 12px; border-radius: 10px; cursor: pointer; }
+  .btn-lien:hover { background: var(--bord); }
 
   main { max-width: 920px; margin: 0 auto; padding: 20px 16px 48px; }
-
-  /* Cartes génériques */
-  .boite { background: var(--carte); border-radius: var(--rayon); box-shadow: var(--ombre); padding: 22px; }
+  .boite { background: var(--carte); border: 1px solid var(--bord); border-radius: var(--rayon); box-shadow: var(--ombre); padding: 22px; }
   h2 { font-size: 1.25rem; margin: 0 0 6px; }
   .aide { color: var(--doux); margin: 0 0 18px; font-size: .95rem; }
 
-  /* Connexion */
   #ecran-connexion { min-height: 70vh; display: grid; place-items: center; }
   #ecran-connexion .boite { width: 100%; max-width: 400px; }
-  label.champ { display: block; font-weight: 600; margin-bottom: 6px; font-size: .92rem; }
+  label.champ { display: block; font-weight: 650; margin-bottom: 6px; font-size: .95rem; }
   input[type=password], input[type=search], input[type=text], textarea {
-    width: 100%; border: 1.5px solid var(--bord); border-radius: 12px; padding: 12px 14px; background: #fff;
+    width: 100%; border: 1.5px solid var(--bord); border-radius: 12px; padding: 12px 14px; background: var(--fond); color: var(--texte);
     outline: none; transition: border-color .15s, box-shadow .15s;
   }
-  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+  input::placeholder, textarea::placeholder { color: #7d8a99; }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
   .case { display: flex; gap: 10px; align-items: center; margin: 14px 0 18px; color: var(--doux); cursor: pointer; }
-  .case input { width: 20px; height: 20px; accent-color: var(--sombre); }
+  .case input { width: 20px; height: 20px; accent-color: var(--entretien); }
   .btn {
-    width: 100%; border: 0; border-radius: 14px; padding: 15px 18px; font-weight: 700; font-size: 1.05rem;
-    background: var(--accent); color: #fff; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 10px;
+    width: 100%; border: 0; border-radius: 14px; padding: 15px 18px; font-weight: 750; font-size: 1.05rem;
+    background: var(--accent); color: #0b1016; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 10px;
     transition: transform .08s, filter .15s, opacity .15s;
   }
+  .btn.colore { color: #fff; }
   .btn:hover { filter: brightness(1.08); }
   .btn:active { transform: scale(.99); }
-  .btn:disabled { opacity: .55; cursor: not-allowed; }
-  .btn.secondaire { background: #fff; color: var(--texte); border: 1.5px solid var(--bord); }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .message { border-radius: 12px; padding: 12px 14px; margin-top: 14px; font-size: .95rem; display: flex; gap: 10px; align-items: flex-start; }
-  .message.erreur { background: #fdecec; color: #9b1c1c; }
-  .message.ok { background: #e8f6ec; color: #17642c; }
-  .message button { margin-left: auto; flex: none; background: #fff; border: 1px solid currentColor; color: inherit; border-radius: 9px; padding: 6px 10px; cursor: pointer; font-weight: 600; }
+  .message.erreur { background: var(--err-fond); color: var(--err-texte); }
+  .message.ok { background: var(--ok-fond); color: var(--ok-texte); }
+  .message.info { background: var(--info-fond); color: var(--info-texte); }
+  .message button { margin-left: auto; flex: none; background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 9px; padding: 6px 10px; cursor: pointer; font-weight: 650; }
 
-  /* Choix du type */
   .types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   @media (min-width: 760px) { .types { grid-template-columns: repeat(4, 1fr); } }
   .type {
     --c: var(--panne);
     border: 0; border-radius: var(--rayon); padding: 22px 14px; min-height: 140px; cursor: pointer; color: #fff;
-    background: linear-gradient(145deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c));
-    box-shadow: 0 10px 24px color-mix(in srgb, var(--c) 35%, transparent);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--c) 85%, #fff), var(--c));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--c) 30%, transparent);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-    font-weight: 750; font-size: 1.05rem; letter-spacing: .02em; transition: transform .12s, box-shadow .12s;
+    font-weight: 800; font-size: 1.05rem; letter-spacing: .02em; transition: transform .12s;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
   }
   .type:hover { transform: translateY(-3px); }
   .type svg { width: 42px; height: 42px; }
-  .type[data-type="PANNE"] { --c: var(--panne); }
-  .type[data-type="MACHINE A CAFE"] { --c: var(--cafe); }
-  .type[data-type="ENTRETIEN"] { --c: var(--entretien); }
-  .type[data-type="LIVRAISON"] { --c: var(--livraison); }
+  [data-type="PANNE"] { --c: var(--panne); }
+  [data-type="MACHINE A CAFE"] { --c: var(--cafe); }
+  [data-type="ENTRETIEN"] { --c: var(--entretien); }
+  [data-type="LIVRAISON"] { --c: var(--livraison); }
 
-  /* Formulaire */
   .entete-form { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-  .pastille { background: var(--accent); color: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 700; display: inline-flex; gap: 8px; align-items: center; }
+  .pastille { background: var(--accent); color: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 750; display: inline-flex; gap: 8px; align-items: center; }
   .pastille svg { width: 20px; height: 20px; }
-  .entete-form .btn-changer { margin-left: auto; background: none; border: 0; color: var(--doux); text-decoration: underline; cursor: pointer; }
+  .btn-changer { margin-left: auto; background: none; border: 0; color: var(--doux); text-decoration: underline; cursor: pointer; }
   .bloc { margin-bottom: 20px; }
 
-  .recherche { position: relative; }
   .liste-cafes {
     list-style: none; margin: 8px 0 0; padding: 6px; border: 1.5px solid var(--bord); border-radius: 12px;
-    max-height: 260px; overflow-y: auto; background: #fff;
+    max-height: 260px; overflow-y: auto; background: var(--fond);
   }
-  .liste-cafes li { padding: 10px 12px; border-radius: 9px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
-  .liste-cafes li:hover, .liste-cafes li.actif { background: color-mix(in srgb, var(--accent) 10%, #fff); }
+  .liste-cafes li { padding: 11px 12px; border-radius: 9px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+  .liste-cafes li:hover, .liste-cafes li.actif { background: color-mix(in srgb, var(--accent) 22%, var(--fond)); }
   .liste-cafes li .ville { color: var(--doux); font-size: .88rem; text-align: right; }
   .liste-cafes .vide { color: var(--doux); cursor: default; }
   .choisi {
     display: flex; align-items: center; gap: 12px; border: 2px solid var(--accent); border-radius: 12px; padding: 12px 14px;
-    background: color-mix(in srgb, var(--accent) 7%, #fff);
+    background: color-mix(in srgb, var(--accent) 14%, var(--fond));
   }
   .choisi strong { display: block; }
   .choisi span { color: var(--doux); font-size: .9rem; }
@@ -119,19 +118,36 @@
 
   .puces { display: flex; flex-wrap: wrap; gap: 8px; }
   .puce {
-    border: 1.5px solid var(--bord); background: #fff; border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 600; font-size: .92rem;
-    transition: background .12s, border-color .12s, color .12s;
+    border: 1.5px solid var(--bord); background: var(--fond); color: var(--texte); border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 650; font-size: .92rem;
   }
   .puce[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .puce.speciale { border-style: dashed; }
   textarea { min-height: 96px; resize: vertical; }
 
-  .chargement { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: tourne .8s linear infinite; }
+  .chargement { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.35); border-top-color: currentColor; border-radius: 50%; animation: tourne .8s linear infinite; }
   @keyframes tourne { to { transform: rotate(360deg); } }
+
+  /* Interventions en cours */
+  #zone-encours { margin-top: 28px; }
+  .titre-encours { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .titre-encours h2 { margin: 0; flex: 1; }
+  .maj { color: var(--doux); font-size: .85rem; margin: 0 0 14px; }
+  .groupe { color: var(--doux); font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
+  .inter {
+    display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center;
+    background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--c);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .inter .badge { grid-row: span 3; align-self: start; background: color-mix(in srgb, var(--c) 78%, #000); color: #fff; border-radius: 10px; padding: 6px 8px; font-size: .75rem; font-weight: 800; text-align: center; min-width: 86px; }
+  .inter .cafe { font-weight: 750; font-size: 1.02rem; }
+  .inter .cafe span { color: var(--doux); font-weight: 400; }
+  .inter .qui { color: var(--texte); font-size: .92rem; }
+  .inter .depuis { color: var(--doux); font-size: .88rem; }
+  .vide-encours { color: var(--doux); padding: 10px 0; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
-    background: #17642c; color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: var(--ombre);
+    background: #166534; color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: var(--ombre);
     font-weight: 650; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center;
   }
   .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -159,7 +175,7 @@
     </form>
   </section>
 
-  <!-- Écran 2 : encodage -->
+  <!-- Écran 2 : encodage + interventions en cours -->
   <section id="ecran-encodage" class="cache">
     <div id="choix-type">
       <h2>Nouvelle intervention</h2>
@@ -181,7 +197,7 @@
 
       <div class="bloc">
         <label class="champ" for="recherche">Café / salle</label>
-        <div id="zone-recherche" class="recherche">
+        <div id="zone-recherche">
           <input id="recherche" type="search" placeholder="Rechercher un nom ou une ville…" role="combobox" aria-expanded="true" aria-controls="liste-cafes" autocomplete="off">
           <ul id="liste-cafes" class="liste-cafes" role="listbox"></ul>
         </div>
@@ -202,9 +218,18 @@
         <textarea id="nature" maxlength="500" placeholder="Décrivez le problème…"></textarea>
       </div>
 
-      <button id="btn-envoyer" class="btn" type="submit">Envoyer</button>
+      <button id="btn-envoyer" class="btn colore" type="submit">Envoyer</button>
       <div id="msg-envoi"></div>
     </form>
+
+    <section id="zone-encours" aria-live="polite">
+      <div class="titre-encours">
+        <h2>Interventions en cours</h2>
+        <button id="btn-actualiser" class="btn-lien" type="button">Actualiser</button>
+      </div>
+      <p id="maj-encours" class="maj">Chargement…</p>
+      <div id="liste-encours"></div>
+    </section>
   </section>
 </main>
 
@@ -217,12 +242,15 @@
   // URL du script Google (déploiement « Application Web », finit par /exec).
   const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxh_B8_LeDhOZ-Gzufb1b0rygihEjs1MRibNG6n368xVQzUi4LCh9cPJv5tjChQ69o/exec';
 
-  // Liste recopiée depuis AppSheet (colonne « Appareils café »),
-  // sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
+  const DELAI_ENVOI_MS = 12000;   // au-delà, on demande au script si l'envoi est arrivé
+  const DELAI_LECTURE_MS = 10000;
+  const RAFRAICHIR_MS = 60000;
+
+  // Liste recopiée depuis AppSheet (colonne « Appareils café »), sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
     'ACTION PACK', 'TOP MACHINE', 'GREYHOUND', 'TEXAS', 'KICKER', 'BILLARD', 'FLECHE', 'AUTRE'];
 
-  const COULEURS = { 'PANNE': '#e53935', 'MACHINE A CAFE': '#8e44ad', 'ENTRETIEN': '#1e88e5', 'LIVRAISON': '#2ea043' };
+  const COULEURS = { 'PANNE': '#ef4444', 'MACHINE A CAFE': '#a855f7', 'ENTRETIEN': '#3b82f6', 'LIVRAISON': '#22c55e' };
   const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison' };
   const ICONES = {
     'PANNE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
@@ -236,49 +264,56 @@
     cafe_inconnu: 'Ce café n’a pas été trouvé dans la liste. Rechargez la page et réessayez.',
     type_invalide: 'Type d’intervention invalide.',
     colonne_manquante: 'La feuille a changé (colonne manquante). Prévenez Marc.',
-    erreur_serveur: 'Erreur du serveur. Réessayez dans un instant.',
+    erreur_serveur: 'Erreur du serveur.',
     action_inconnue: 'Action inconnue.',
-    reseau: 'Connexion impossible. Vérifiez le réseau.'
+    reseau: 'Pas de connexion au serveur.',
+    delai: 'Le serveur ne répond pas.'
   };
 
   const $ = (id) => document.getElementById(id);
-  const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']), envoiEnCours: false };
+  const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']),
+                 envoiEnCours: false, envoi: null, encours: null, encoursRecu: 0, encoursDecalage: 0 };
 
   /* ---------- Stockage du mot de passe ---------- */
   const CLE = 'pannes_mdp';
-  function lireMdp() {
-    try { return localStorage.getItem(CLE) || sessionStorage.getItem(CLE) || ''; } catch (e) { return ''; }
-  }
+  function lireMdp() { try { return localStorage.getItem(CLE) || sessionStorage.getItem(CLE) || ''; } catch (e) { return ''; } }
   function garderMdp(mdp, rester) {
-    try {
-      localStorage.removeItem(CLE); sessionStorage.removeItem(CLE);
-      (rester ? localStorage : sessionStorage).setItem(CLE, mdp);
-    } catch (e) { /* stockage indisponible : la session reste en mémoire */ }
+    try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); (rester ? localStorage : sessionStorage).setItem(CLE, mdp); } catch (e) {}
   }
-  function oublierMdp() {
-    try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); } catch (e) {}
+  function oublierMdp() { try { localStorage.removeItem(CLE); sessionStorage.removeItem(CLE); } catch (e) {} }
+
+  function nouvelId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
   }
 
-  /* ---------- Appels au script ---------- */
-  async function appeler(corps) {
-    let rep;
+  /* ---------- Appels au script (POST texte, délai maximum, lecture texte puis JSON) ---------- */
+  async function appeler(corps, delaiMs) {
+    const ctrl = new AbortController();
+    const minuteur = setTimeout(() => ctrl.abort(), delaiMs || DELAI_LECTURE_MS);
     try {
-      rep = await fetch(URL_SCRIPT, {
+      const rep = await fetch(URL_SCRIPT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(Object.assign({}, corps, { motdepasse: etat.motdepasse })),
-        cache: 'no-store',
-        redirect: 'follow'
+        cache: 'no-store', redirect: 'follow', credentials: 'omit', signal: ctrl.signal
       });
+      const texte = await rep.text();
+      if (!rep.ok) return { ok: false, erreur: 'reseau' };
+      try { return JSON.parse(texte); } catch (e) { return { ok: false, erreur: 'erreur_serveur' }; }
     } catch (e) {
-      return { ok: false, erreur: 'reseau' };
+      return { ok: false, erreur: e && e.name === 'AbortError' ? 'delai' : 'reseau' };
+    } finally {
+      clearTimeout(minuteur);
     }
-    if (!rep.ok) return { ok: false, erreur: 'reseau' };
-    try { return await rep.json(); } catch (e) { return { ok: false, erreur: 'erreur_serveur' }; }
   }
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
   /* ---------- Messages ---------- */
-  function message(zone, type, texte, reessayer) {
+  function message(zone, type, texte, bouton, action) {
     const el = $(zone);
     el.innerHTML = '';
     if (!texte) return;
@@ -287,10 +322,10 @@
     const span = document.createElement('span');
     span.textContent = texte;
     div.appendChild(span);
-    if (reessayer) {
+    if (bouton) {
       const b = document.createElement('button');
-      b.type = 'button'; b.textContent = 'Réessayer';
-      b.addEventListener('click', reessayer);
+      b.type = 'button'; b.textContent = bouton;
+      b.addEventListener('click', action);
       div.appendChild(b);
     }
     el.appendChild(div);
@@ -298,20 +333,19 @@
   let minuteurToast;
   function toast(texte) {
     const t = $('toast');
-    t.textContent = texte;
-    t.classList.add('visible');
+    t.textContent = texte; t.classList.add('visible');
     clearTimeout(minuteurToast);
     minuteurToast = setTimeout(() => t.classList.remove('visible'), 4500);
   }
   function occupe(btn, oui, texte) {
-    btn.disabled = oui;
-    btn.innerHTML = '';
+    btn.disabled = oui; btn.innerHTML = '';
     if (oui) { const s = document.createElement('span'); s.className = 'chargement'; btn.appendChild(s); }
     btn.appendChild(document.createTextNode(texte));
   }
 
   /* ---------- Écrans ---------- */
   function afficherConnexion(erreur) {
+    arreterRafraichissement();
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
     $('ecran-connexion').classList.remove('cache');
@@ -324,6 +358,8 @@
     $('ecran-encodage').classList.remove('cache');
     $('btn-deconnexion').classList.remove('cache');
     revenirAuxTypes();
+    chargerEnCours();
+    demarrerRafraichissement();
   }
 
   /* ---------- Connexion ---------- */
@@ -332,10 +368,7 @@
     const r = await appeler({ action: 'cafes' });
     if (btn) occupe(btn, false, 'Se connecter');
     if (r.ok && !Array.isArray(r.cafes)) return { ok: false, erreur: 'erreur_serveur' };
-    if (r.ok) {
-      etat.cafes = r.cafes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
-      return { ok: true };
-    }
+    if (r.ok) { etat.cafes = r.cafes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')); return { ok: true }; }
     return r;
   }
 
@@ -348,20 +381,15 @@
     etat.motdepasse = mdp;
     message('msg-connexion', '', '');
     const r = await chargerCafes(btn);
-    if (r.ok) {
-      garderMdp(mdp, $('rester').checked);
-      afficherEncodage();
-    } else if (r.erreur === 'reseau') {
-      message('msg-connexion', 'erreur', MESSAGES.reseau, () => $('form-connexion').requestSubmit());
-    } else {
-      etat.motdepasse = '';
-      message('msg-connexion', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
-    }
+    if (r.ok) { garderMdp(mdp, $('rester').checked); afficherEncodage(); }
+    else if (r.erreur === 'reseau' || r.erreur === 'delai') {
+      message('msg-connexion', 'erreur', MESSAGES[r.erreur], 'Réessayer', () => $('form-connexion').requestSubmit());
+    } else { etat.motdepasse = ''; message('msg-connexion', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur); }
   });
 
   $('btn-deconnexion').addEventListener('click', () => {
-    oublierMdp();
-    etat.motdepasse = ''; etat.cafes = [];
+    oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
+    $('liste-encours').innerHTML = '';
     afficherConnexion();
   });
 
@@ -370,10 +398,7 @@
   document.querySelectorAll('.type').forEach((b) => b.addEventListener('click', () => choisirType(b.dataset.type)));
 
   function choisirType(type) {
-    if (!etat.cafes.length) {
-      message('msg-cafes', 'erreur', 'La liste des cafés n’est pas chargée.', recharger);
-      return;
-    }
+    if (!etat.cafes.length) { message('msg-cafes', 'erreur', 'La liste des cafés n’est pas chargée.', 'Réessayer', rechargerCafes); return; }
     etat.type = type;
     document.documentElement.style.setProperty('--accent', COULEURS[type]);
     $('pastille').innerHTML = ICONES[type];
@@ -386,59 +411,42 @@
   }
 
   function revenirAuxTypes() {
-    etat.type = ''; etat.cafe = null;
+    etat.type = ''; etat.cafe = null; etat.envoi = null;
     etat.machines = new Set(['INDETERMINE']);
     dessinerMachines();
-    $('nature').value = '';
-    $('recherche').value = '';
+    $('nature').value = ''; $('recherche').value = '';
     afficherCafeChoisi();
-    document.documentElement.style.setProperty('--accent', '#111827');
+    document.documentElement.style.setProperty('--accent', '#e2e8f0');
     $('form-envoi').classList.add('cache');
     $('choix-type').classList.remove('cache');
-    message('msg-cafes', '', '');
+    message('msg-envoi', '', '');
   }
   $('btn-changer').addEventListener('click', () => {
-    const cafe = etat.cafe;
-    revenirAuxTypes();
-    etat.cafe = cafe; afficherCafeChoisi();
+    if (etat.envoiEnCours) return;
+    const cafe = etat.cafe; revenirAuxTypes(); etat.cafe = cafe; afficherCafeChoisi();
   });
 
-  async function recharger() {
-    message('msg-cafes', '', 'Chargement…');
+  async function rechargerCafes() {
+    message('msg-cafes', 'info', 'Chargement…');
     const r = await chargerCafes();
-    if (r.ok) { message('msg-cafes', 'ok', 'Liste des cafés chargée.'); }
+    if (r.ok) message('msg-cafes', 'ok', 'Liste des cafés chargée.');
     else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') { oublierMdp(); afficherConnexion(r.erreur); }
-    else message('msg-cafes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, recharger);
+    else message('msg-cafes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', rechargerCafes);
   }
 
   /* ---------- Recherche des cafés ---------- */
   const normaliser = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let actif = -1;
-
   function filtrer() {
-    const q = normaliser($('recherche').value).trim();
-    const mots = q.split(/\s+/).filter(Boolean);
-    const res = etat.cafes.filter((c) => {
-      const txt = normaliser(c.nom + ' ' + c.ville);
-      return mots.every((m) => txt.includes(m));
-    }).slice(0, 80);
-    const ul = $('liste-cafes');
-    ul.innerHTML = '';
-    actif = res.length ? 0 : -1;
-    if (!res.length) {
-      const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li);
-      return;
-    }
+    const mots = normaliser($('recherche').value).trim().split(/\s+/).filter(Boolean);
+    const res = etat.cafes.filter((c) => { const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m)); }).slice(0, 80);
+    const ul = $('liste-cafes'); ul.innerHTML = ''; actif = res.length ? 0 : -1;
+    if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
     res.forEach((c, i) => {
-      const li = document.createElement('li');
-      li.setAttribute('role', 'option');
-      if (i === 0) li.classList.add('actif');
+      const li = document.createElement('li'); li.setAttribute('role', 'option'); if (i === 0) li.classList.add('actif');
       const n = document.createElement('span'); n.textContent = c.nom;
       const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
-      li.append(n, v);
-      li.addEventListener('click', () => choisirCafe(c));
-      li._cafe = c;
-      ul.appendChild(li);
+      li.append(n, v); li.addEventListener('click', () => choisirCafe(c)); li._cafe = c; ul.appendChild(li);
     });
   }
   $('recherche').addEventListener('input', filtrer);
@@ -446,94 +454,189 @@
     const items = [...$('liste-cafes').querySelectorAll('li[role=option]')];
     if (!items.length) return;
     if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-      ev.preventDefault();
-      items[actif] && items[actif].classList.remove('actif');
+      ev.preventDefault(); items[actif] && items[actif].classList.remove('actif');
       actif = (actif + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
-      items[actif].classList.add('actif');
-      items[actif].scrollIntoView({ block: 'nearest' });
-    } else if (ev.key === 'Enter') {
-      ev.preventDefault();
-      if (items[actif]) choisirCafe(items[actif]._cafe);
-    }
+      items[actif].classList.add('actif'); items[actif].scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter') { ev.preventDefault(); if (items[actif]) choisirCafe(items[actif]._cafe); }
   });
-
-  function choisirCafe(c) {
-    etat.cafe = c;
-    afficherCafeChoisi();
-    message('msg-envoi', '', '');
-  }
+  function choisirCafe(c) { etat.cafe = c; afficherCafeChoisi(); message('msg-envoi', '', ''); }
   function afficherCafeChoisi() {
     const c = etat.cafe;
     $('zone-recherche').classList.toggle('cache', !!c);
     $('cafe-choisi').classList.toggle('cache', !c);
-    if (c) { $('cafe-nom').textContent = c.nom; $('cafe-ville').textContent = c.ville; }
+    if (c) { $('cafe-nom').textContent = c.nom; $('cafe-ville').textContent = ' ' + c.ville; }
   }
   $('btn-autre-cafe').addEventListener('click', () => {
-    etat.cafe = null; afficherCafeChoisi();
-    $('recherche').value = ''; filtrer(); $('recherche').focus();
+    if (etat.envoiEnCours) return;
+    etat.cafe = null; etat.envoi = null; afficherCafeChoisi(); $('recherche').value = ''; filtrer(); $('recherche').focus();
   });
 
   /* ---------- Machines (PANNE uniquement) ---------- */
   function dessinerMachines() {
-    const zone = $('puces-machines');
-    zone.innerHTML = '';
+    const zone = $('puces-machines'); zone.innerHTML = '';
     MACHINES.forEach((m) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'puce' + (m === 'INDETERMINE' || m === 'AUTRE' ? ' speciale' : '');
-      b.textContent = m;
-      b.setAttribute('aria-pressed', etat.machines.has(m) ? 'true' : 'false');
-      b.addEventListener('click', () => basculerMachine(m));
-      zone.appendChild(b);
+      b.textContent = m; b.setAttribute('aria-pressed', etat.machines.has(m) ? 'true' : 'false');
+      b.addEventListener('click', () => basculerMachine(m)); zone.appendChild(b);
     });
   }
   function basculerMachine(m) {
     const s = etat.machines;
     if (m === 'INDETERMINE') { s.clear(); s.add('INDETERMINE'); }
-    else {
-      if (s.has(m)) s.delete(m); else { s.add(m); s.delete('INDETERMINE'); }
-      if (!s.size) s.add('INDETERMINE');
-    }
+    else { if (s.has(m)) s.delete(m); else { s.add(m); s.delete('INDETERMINE'); } if (!s.size) s.add('INDETERMINE'); }
     dessinerMachines();
   }
 
-  /* ---------- Envoi ---------- */
-  $('form-envoi').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
+  /* ---------- Envoi avec accusé de réception et anti-doublon ---------- */
+  // Un envoi = un identifiant. "Réessayer" réutilise TOUJOURS le même identifiant :
+  // le script reconnaît l'identifiant et ne crée jamais de 2e ligne.
+  $('form-envoi').addEventListener('submit', (ev) => { ev.preventDefault(); envoyer(); });
+
+  async function envoyer() {
     if (etat.envoiEnCours) return;
     if (!etat.cafe) { message('msg-envoi', 'erreur', 'Choisissez un café dans la liste.'); $('recherche').focus(); return; }
-
-    const appareil = etat.type === 'PANNE' ? MACHINES.filter((m) => etat.machines.has(m)).join(' , ') : '';
-    const corps = {
-      action: 'envoyer', type: etat.type,
-      licence: etat.cafe.licence, nom: etat.cafe.nom,
-      appareil: appareil, nature: $('nature').value.trim()
-    };
-
-    etat.envoiEnCours = true;
+    // L'identifiant reste le même tant que l'envoi n'est pas confirmé (même après une erreur).
+    if (!etat.envoi) etat.envoi = { id: nouvelId() };
+    etat.envoi.corps = {
+      action: 'envoyer', type: etat.type, licence: etat.cafe.licence, nom: etat.cafe.nom,
+      appareil: etat.type === 'PANNE' ? MACHINES.filter((m) => etat.machines.has(m)).join(' , ') : '',
+      nature: $('nature').value.trim() };
+    const envoi = etat.envoi;
     const btn = $('btn-envoyer');
+    etat.envoiEnCours = true;
     occupe(btn, true, 'Envoi en cours…');
     message('msg-envoi', '', '');
-    const r = await appeler(corps);
+    const t0 = performance.now();
+
+    let r = await appeler(Object.assign({ id: envoi.id }, envoi.corps), DELAI_ENVOI_MS);
+
+    // Réponse perdue ou trop lente : on demande au script si cet identifiant a été enregistré.
+    if (!r.ok && (r.erreur === 'reseau' || r.erreur === 'delai' || r.erreur === 'erreur_serveur')) {
+      occupe(btn, true, 'Vérification…');
+      r = await verifierEnvoi(envoi.id, r);
+    }
+    const duree = Math.round(performance.now() - t0);
     etat.envoiEnCours = false;
     occupe(btn, false, 'Envoyer');
 
-    // Succès uniquement si le script confirme le numéro de la ligne écrite.
     if (r.ok && r.ligne) {
+      console.info('[PWA] envoi ' + envoi.id + ' confirmé en ' + duree + ' ms (ligne ' + r.ligne + (r.doublon ? ', déjà reçu' : '') + ')');
       const resume = LIBELLES[etat.type] + ' – ' + etat.cafe.nom;
       revenirAuxTypes();
       message('msg-cafes', 'ok', 'Enregistré : ' + resume + '.');
       toast('✓ Enregistré : ' + resume);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      chargerEnCours();
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
       oublierMdp(); afficherConnexion(r.erreur);
-    } else if (r.erreur === 'reseau' || r.erreur === 'erreur_serveur') {
-      message('msg-envoi', 'erreur', MESSAGES[r.erreur] + ' Votre saisie est conservée : vous pouvez réessayer.', () => $('form-envoi').requestSubmit());
-    } else if (r.ok) {
-      message('msg-envoi', 'erreur', 'Réponse inattendue du serveur : l’enregistrement n’est pas confirmé. Vérifiez la liste AppSheet avant de renvoyer.');
+    } else if (r.nonRecu) {
+      message('msg-envoi', 'erreur', 'L’envoi n’est pas arrivé au serveur. Votre saisie est conservée.', 'Réessayer', envoyer);
+    } else if (r.inconnu) {
+      message('msg-envoi', 'erreur', 'Impossible de vérifier si l’envoi est arrivé (' + (MESSAGES[r.erreur] || r.erreur) + '). Rien ne sera envoyé en double.', 'Réessayer', envoyer);
     } else {
       message('msg-envoi', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
     }
+  }
+
+  // Interroge le script : { ok, ligne } si enregistré, { nonRecu } s'il ne l'a jamais reçu,
+  // { inconnu } si le serveur reste injoignable.
+  async function verifierEnvoi(id, premiereErreur) {
+    let derniere = premiereErreur;
+    for (let essai = 0; essai < 6; essai++) {
+      const s = await appeler({ action: 'statut', id: id }, 8000);
+      if (s.ok && s.trouve) return { ok: true, ligne: s.ligne, doublon: true };
+      if (s.ok && !s.trouve && !s.enTraitement) return { ok: false, nonRecu: true };
+      if (!s.ok && (s.erreur === 'mot_de_passe' || s.erreur === 'bloque')) return s;
+      if (!s.ok) derniere = s;
+      await pause(2000);   // en traitement ou réseau absent : on réessaie dans 2 s
+    }
+    return { ok: false, inconnu: true, erreur: derniere && derniere.erreur ? derniere.erreur : 'delai' };
+  }
+
+  /* ---------- Interventions en cours (lecture seule) ---------- */
+  let minuteurEncours = null;
+  function demarrerRafraichissement() {
+    arreterRafraichissement();
+    minuteurEncours = setInterval(() => { if (document.visibilityState === 'visible') chargerEnCours(); else afficherEnCours(); }, RAFRAICHIR_MS);
+  }
+  function arreterRafraichissement() { if (minuteurEncours) clearInterval(minuteurEncours); minuteurEncours = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && etat.motdepasse && minuteurEncours) chargerEnCours();
   });
+  $('btn-actualiser').addEventListener('click', () => chargerEnCours(true));
+
+  let chargementEncours = false;
+  async function chargerEnCours(manuel) {
+    if (chargementEncours || !etat.motdepasse) return;
+    chargementEncours = true;
+    if (manuel) occupe($('btn-actualiser'), true, 'Actualiser');
+    const r = await appeler({ action: 'encours' }, DELAI_LECTURE_MS);
+    if (manuel) occupe($('btn-actualiser'), false, 'Actualiser');
+    chargementEncours = false;
+    if (r.ok && Array.isArray(r.interventions)) {
+      etat.encours = r.interventions;
+      etat.encoursRecu = Date.now();
+      // Décalage entre l'heure de Bruxelles du serveur et l'horloge de l'appareil.
+      etat.encoursDecalage = r.maintenant ? Date.now() - lireHeure(r.maintenant) : 0;
+      afficherEnCours();
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      oublierMdp(); afficherConnexion(r.erreur);
+    } else {
+      // Échec : on garde la liste précédente, sans faux message d'erreur.
+      afficherEnCours(true);
+    }
+  }
+
+  const lireHeure = (s) => { const d = new Date(s); return isNaN(d) ? NaN : d.getTime(); };
+  const heureCourte = (ms) => new Date(ms).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
+  function depuis(texte) {
+    const t = lireHeure(texte);
+    if (isNaN(t)) return '';
+    const min = Math.max(0, Math.round((Date.now() - etat.encoursDecalage - t) / 60000));
+    if (min < 60) return min + ' min';
+    const h = Math.floor(min / 60), m = min % 60;
+    return h + ' h ' + String(m).padStart(2, '0');
+  }
+  const nomTechnicien = (t) => String(t || '').split(/\s*,\s*/).filter(Boolean).join(' + ');
+
+  function afficherEnCours(echec) {
+    const zone = $('liste-encours');
+    const maj = $('maj-encours');
+    if (!etat.encours) {
+      maj.textContent = echec ? 'Liste indisponible pour le moment. Nouvel essai automatique dans 1 minute.' : 'Chargement…';
+      return;
+    }
+    maj.textContent = 'Mise à jour : ' + heureCourte(etat.encoursRecu) + (echec ? ' (dernière actualisation impossible, nouvel essai dans 1 minute)' : '');
+    zone.innerHTML = '';
+    const enCours = etat.encours.filter((i) => i.statut === 'En cours')
+      .sort((a, b) => nomTechnicien(a.technicien).localeCompare(nomTechnicien(b.technicien), 'fr') || (a.debut || a.horodateur).localeCompare(b.debut || b.horodateur));
+    const enAttente = etat.encours.filter((i) => i.statut === 'En attente')
+      .sort((a, b) => a.horodateur.localeCompare(b.horodateur));
+    if (!enCours.length && !enAttente.length) {
+      const p = document.createElement('p'); p.className = 'vide-encours'; p.textContent = 'Aucune intervention en attente ou en cours.'; zone.appendChild(p); return;
+    }
+    let groupe = null;
+    enCours.forEach((i) => {
+      const tech = nomTechnicien(i.technicien) || 'Technicien non indiqué';
+      if (tech !== groupe) { groupe = tech; titreGroupe(zone, 'En cours · ' + tech); }
+      zone.appendChild(carte(i, tech, 'En cours depuis ' + depuis(i.debut || i.horodateur)));
+    });
+    if (enAttente.length) titreGroupe(zone, 'En attente');
+    enAttente.forEach((i) => zone.appendChild(carte(i, 'Non prise', 'En attente depuis ' + depuis(i.horodateur))));
+  }
+  function titreGroupe(zone, texte) { const h = document.createElement('div'); h.className = 'groupe'; h.textContent = texte; zone.appendChild(h); }
+  function carte(i, qui, quand) {
+    const d = document.createElement('div');
+    d.className = 'inter'; d.dataset.type = i.type;
+    const b = document.createElement('div'); b.className = 'badge'; b.textContent = (LIBELLES[i.type] || i.type).toUpperCase();
+    const c = document.createElement('div'); c.className = 'cafe'; c.textContent = i.cafe + ' ';
+    const v = document.createElement('span'); v.textContent = '· ' + i.ville; c.appendChild(v);
+    const q = document.createElement('div'); q.className = 'qui'; q.textContent = qui;
+    const t = document.createElement('div'); t.className = 'depuis'; t.textContent = quand;
+    d.append(b, c, q, t);
+    return d;
+  }
 
   /* ---------- Démarrage ---------- */
   async function demarrer() {
@@ -541,10 +644,8 @@
     if (!etat.motdepasse) { afficherConnexion(); return; }
     const r = await chargerCafes();
     if (r.ok) afficherEncodage();
-    else if (r.erreur === 'reseau') {
-      afficherEncodage();
-      message('msg-cafes', 'erreur', MESSAGES.reseau, recharger);
-    } else { oublierMdp(); etat.motdepasse = ''; afficherConnexion(r.erreur); }
+    else if (r.erreur === 'reseau' || r.erreur === 'delai') { afficherEncodage(); message('msg-cafes', 'erreur', MESSAGES[r.erreur], 'Réessayer', rechargerCafes); }
+    else { oublierMdp(); etat.motdepasse = ''; afficherConnexion(r.erreur); }
   }
   dessinerMachines();
   demarrer();
