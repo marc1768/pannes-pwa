@@ -132,6 +132,7 @@
   .titre-encours { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
   .titre-encours h2 { margin: 0; flex: 1; }
   .maj { color: var(--doux); font-size: .85rem; margin: 0 0 14px; }
+  .maj.alerte { color: #f59e0b; }
   .groupe { color: var(--doux); font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
   .inter {
     display: flex; gap: 12px; align-items: flex-start;
@@ -280,8 +281,9 @@
   const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxh_B8_LeDhOZ-Gzufb1b0rygihEjs1MRibNG6n368xVQzUi4LCh9cPJv5tjChQ69o/exec';
 
   const DELAI_ENVOI_MS = 12000;   // au-delà, on demande au script si l'envoi est arrivé
-  const DELAI_LECTURE_MS = 10000;
+  const DELAI_LECTURE_MS = 25000;   // lectures (cafés, interventions) : Google répond parfois en 5 à 11 s
   const RAFRAICHIR_MS = 60000;
+  const ALERTE_APRES_MS = 180000;   // alerte discrète après 3 minutes sans lecture réussie
 
   // Liste recopiée depuis AppSheet (colonne « Appareils café »), sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
@@ -314,7 +316,7 @@
   const $ = (id) => document.getElementById(id);
   const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']),
                  envoiEnCours: false, envoi: null, encours: null, encoursRecu: 0, encoursDecalage: 0,
-                 annulations: new Map(), masquees: new Set() };
+                 annulations: new Map(), masquees: new Set(), suiviActif: false, debutSuivi: 0 };
 
   /* ---------- Stockage du mot de passe ---------- */
   const CLE = 'pannes_mdp';
@@ -354,6 +356,23 @@
   }
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Lectures (cafés, interventions en cours) : jamais deux en même temps (chacune attend la fin
+  // de la précédente), délai 25 s, et UN nouvel essai silencieux en cas d'échec réseau.
+  // Les écritures (envoyer, annuler, statut) n'y passent pas : leur comportement ne change pas.
+  let fileLectures = Promise.resolve();
+  function lire(corps) {
+    const tache = fileLectures.then(async () => {
+      let r = await appeler(corps, DELAI_LECTURE_MS);
+      if (!r.ok && (r.erreur === 'reseau' || r.erreur === 'delai' || r.erreur === 'erreur_serveur')) {
+        await pause(3000);
+        r = await appeler(corps, DELAI_LECTURE_MS);
+      }
+      return r;
+    });
+    fileLectures = tache.catch(() => {});
+    return tache;
+  }
+
   /* ---------- Messages ---------- */
   function message(zone, type, texte, bouton, action) {
     const el = $(zone);
@@ -387,6 +406,7 @@
 
   /* ---------- Écrans ---------- */
   function afficherConnexion(erreur) {
+    etat.suiviActif = false;
     arreterRafraichissement();
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
@@ -400,6 +420,8 @@
     $('ecran-encodage').classList.remove('cache');
     $('btn-deconnexion').classList.remove('cache');
     revenirAuxTypes();
+    etat.suiviActif = true;
+    etat.debutSuivi = Date.now();
     chargerEnCours();
     demarrerRafraichissement();
   }
@@ -407,7 +429,7 @@
   /* ---------- Connexion ---------- */
   async function chargerCafes(btn) {
     if (btn) occupe(btn, true, 'Connexion…');
-    const r = await appeler({ action: 'cafes' });
+    const r = await lire({ action: 'cafes' });
     if (btn) occupe(btn, false, 'Se connecter');
     if (r.ok && !Array.isArray(r.cafes)) return { ok: false, erreur: 'erreur_serveur' };
     if (r.ok) { etat.cafes = r.cafes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')); return { ok: true }; }
@@ -597,25 +619,36 @@
   }
 
   /* ---------- Interventions en cours (lecture seule) ---------- */
-  let minuteurEncours = null;
+  // Rafraîchissement automatique toutes les 60 s, seulement quand la PWA est visible.
+  // Un échec automatique n'affiche JAMAIS de message : la liste reste affichée avec
+  // « Mise à jour il y a N min » ; alerte discrète après 3 minutes sans lecture réussie.
+  let minuteurEncours = null, minuteurAffichage = null;
   function demarrerRafraichissement() {
     arreterRafraichissement();
-    minuteurEncours = setInterval(() => { if (document.visibilityState === 'visible') chargerEnCours(); else afficherEnCours(); }, RAFRAICHIR_MS);
+    if (document.visibilityState !== 'visible') return;   // en pause : reprise à l'ouverture
+    minuteurEncours = setInterval(() => chargerEnCours(), RAFRAICHIR_MS);
+    // Sans réseau : met à jour « il y a N min » et les durées « depuis » des cartes.
+    minuteurAffichage = setInterval(() => afficherEnCours(), 30000);
   }
-  function arreterRafraichissement() { if (minuteurEncours) clearInterval(minuteurEncours); minuteurEncours = null; }
+  function arreterRafraichissement() {
+    clearInterval(minuteurEncours); clearInterval(minuteurAffichage);
+    minuteurEncours = null; minuteurAffichage = null;
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && etat.motdepasse && minuteurEncours) chargerEnCours();
+    if (!etat.suiviActif) return;
+    if (document.visibilityState === 'visible') { afficherEnCours(); chargerEnCours(); demarrerRafraichissement(); }
+    else arreterRafraichissement();
   });
   $('btn-actualiser').addEventListener('click', () => chargerEnCours(true));
 
-  let chargementEncours = false;
+  let lectureEncours = null;          // lecture « encours » en cours (on s'y rattache au lieu d'en lancer une 2e)
+  let erreurActualiser = false;       // message d'erreur du bouton « Actualiser » affiché
   async function chargerEnCours(manuel) {
-    if (chargementEncours || !etat.motdepasse) return;
-    chargementEncours = true;
+    if (!etat.motdepasse) return;
     if (manuel) occupe($('btn-actualiser'), true, 'Actualiser');
-    const r = await appeler({ action: 'encours' }, DELAI_LECTURE_MS);
+    if (!lectureEncours) lectureEncours = lire({ action: 'encours' }).finally(() => { lectureEncours = null; });
+    const r = await lectureEncours;
     if (manuel) occupe($('btn-actualiser'), false, 'Actualiser');
-    chargementEncours = false;
     if (r.ok && Array.isArray(r.interventions)) {
       etat.encours = r.interventions;
       const presentes = new Set(r.interventions.map(cleInter));
@@ -623,17 +656,38 @@
       etat.encoursRecu = Date.now();
       // Décalage entre l'heure de Bruxelles du serveur et l'horloge de l'appareil.
       etat.encoursDecalage = r.maintenant ? Date.now() - lireHeure(r.maintenant) : 0;
+      if (erreurActualiser) { erreurActualiser = false; message('msg-encours', '', ''); }
       afficherEnCours();
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
       oublierMdp(); afficherConnexion(r.erreur);
+    } else if (manuel) {
+      // Seul un clic sur « Actualiser » qui échoue affiche un message (la liste reste affichée).
+      erreurActualiser = true;
+      message('msg-encours', 'erreur', 'Impossible d’actualiser la liste pour le moment (' + (MESSAGES[r.erreur] || MESSAGES.erreur_serveur).replace(/\.$/, '').toLowerCase() + '). La liste affichée reste valable ; nouvel essai automatique.',
+              'Réessayer', () => chargerEnCours(true));
+      majTexte();
     } else {
-      // Échec : on garde la liste précédente, sans faux message d'erreur.
-      afficherEnCours(true);
+      majTexte();   // échec automatique : silencieux
     }
   }
 
+  // Ligne sous le titre : « Mise à jour il y a N min », et alerte discrète après 3 minutes sans succès.
+  function majTexte() {
+    const maj = $('maj-encours');
+    const depuisSucces = Date.now() - (etat.encours ? etat.encoursRecu : (etat.debutSuivi || Date.now()));
+    const alerte = depuisSucces > ALERTE_APRES_MS;
+    let texte;
+    if (!etat.encours) texte = alerte ? 'Liste pas encore disponible : le serveur ne répond pas pour le moment. Nouvel essai automatique.' : 'Chargement…';
+    else {
+      const min = Math.floor(depuisSucces / 60000);
+      texte = min < 1 ? 'Mise à jour à l’instant' : 'Mise à jour il y a ' + min + ' min';
+      if (alerte) texte += ' · le serveur ne répond pas pour le moment, nouvel essai automatique';
+    }
+    maj.textContent = texte;
+    maj.classList.toggle('alerte', alerte);
+  }
+
   const lireHeure = (s) => { const d = new Date(s); return isNaN(d) ? NaN : d.getTime(); };
-  const heureCourte = (ms) => new Date(ms).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
   function depuis(texte) {
     const t = lireHeure(texte);
     if (isNaN(t)) return '';
@@ -644,14 +698,10 @@
   }
   const nomTechnicien = (t) => String(t || '').split(/\s*,\s*/).filter(Boolean).join(' + ');
 
-  function afficherEnCours(echec) {
+  function afficherEnCours() {
     const zone = $('liste-encours');
-    const maj = $('maj-encours');
-    if (!etat.encours) {
-      maj.textContent = echec ? 'Liste indisponible pour le moment. Nouvel essai automatique dans 1 minute.' : 'Chargement…';
-      return;
-    }
-    maj.textContent = 'Mise à jour : ' + heureCourte(etat.encoursRecu) + (echec ? ' (dernière actualisation impossible, nouvel essai dans 1 minute)' : '');
+    majTexte();
+    if (!etat.encours) return;   // pas encore de liste : on ne touche pas à la zone
     zone.innerHTML = '';
     const visibles = etat.encours.filter((i) => !etat.masquees.has(cleInter(i)));
     const enCours = visibles.filter((i) => i.statut === 'En cours')
