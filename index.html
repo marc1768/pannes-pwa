@@ -383,11 +383,26 @@
   }
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Lectures (cafés, interventions en cours) : jamais deux en même temps (chacune attend la fin
-  // de la précédente), délai 25 s, et UN nouvel essai silencieux en cas d'échec réseau.
+  // Lectures (cafés, interventions en cours) :
+  //  - rafraîchissements automatiques (toutes les 60 s) : jamais deux en même temps (chacune attend
+  //    la fin de la précédente), délai 25 s, et UN nouvel essai silencieux en cas d'échec réseau ;
+  //  - lectures « directes » (ouverture de la PWA, retour au premier plan, Actualiser, Réessayer) :
+  //    lancées TOUT DE SUITE, en parallèle, sans file d'attente. Un seul nouvel essai, et seulement
+  //    si le réseau a échoué immédiatement (jamais après un délai dépassé : pas de 25 s + 25 s).
   // Les écritures (envoyer, annuler, statut) n'y passent pas : leur comportement ne change pas.
   let fileLectures = Promise.resolve();
-  function lire(corps) {
+  async function lireDirect(corps) {
+    const mdp = etat.motdepasse;
+    let r = await appeler(corps, DELAI_LECTURE_MS);
+    if (!r.ok && r.erreur === 'reseau' && etat.motdepasse === mdp) {
+      await pause(1500);
+      if (etat.motdepasse !== mdp) return { ok: false, erreur: 'annule' };
+      r = await appeler(corps, DELAI_LECTURE_MS);
+    }
+    return r;
+  }
+  function lire(corps, direct) {
+    if (direct) return lireDirect(corps);
     const mdp = etat.motdepasse;
     const tache = fileLectures.then(async () => {
       // Mot de passe refusé ou déconnexion entre-temps : on n'envoie pas (pas d'essai raté en plus).
@@ -452,7 +467,7 @@
     revenirAuxTypes();
     etat.suiviActif = true;
     etat.debutSuivi = Date.now();
-    chargerEnCours();
+    chargerEnCours(false, true);   // lecture directe, en parallèle de la liste des cafés
     demarrerRafraichissement();
   }
 
@@ -461,7 +476,7 @@
 
   async function chargerCafes(btn) {
     if (btn) occupe(btn, true, 'Connexion…');
-    const r = await lire({ action: 'cafes' });
+    const r = await lire({ action: 'cafes' }, true);   // connexion : lecture directe (pas de 25 s + 25 s)
     if (btn) occupe(btn, false, 'Se connecter');
     if (r.ok && !Array.isArray(r.cafes)) return { ok: false, erreur: 'erreur_serveur' };
     if (r.ok) { appliquerCafes(r.cafes); return { ok: true }; }
@@ -473,15 +488,15 @@
   // explicitement "mot_de_passe" ou "bloque" ; un délai dépassé ou une erreur réseau garde la
   // liste précédente, sans message.
   const suiviCafes = { promesse: null, debut: 0, echec: false, minuteur: null };
-  function rafraichirCafes(manuel) {
+  function rafraichirCafes(manuel, direct) {
     if (!etat.motdepasse) return Promise.resolve({ ok: false });
     if (suiviCafes.promesse && !manuel) return suiviCafes.promesse;
     const mdp = etat.motdepasse;
     suiviCafes.debut = Date.now(); suiviCafes.echec = false;
     clearTimeout(suiviCafes.minuteur);
     suiviCafes.minuteur = setTimeout(afficherEtatCafes, REESSAYER_APRES_MS + 50);   // fait apparaître « Réessayer »
-    // « Réessayer » : appel direct, sans attendre dans la file des lectures.
-    const p = (manuel ? appeler({ action: 'cafes' }, DELAI_LECTURE_MS) : lire({ action: 'cafes' })).then((r) => {
+    // Ouverture et « Réessayer » : lecture directe, sans attendre dans la file des lectures.
+    const p = lire({ action: 'cafes' }, manuel || direct).then((r) => {
       if (suiviCafes.promesse === p) suiviCafes.promesse = null;
       if (etat.motdepasse !== mdp) return r;               // déconnecté entre-temps : réponse ignorée
       if (r.ok && Array.isArray(r.cafes) && r.cafes.length) {
@@ -680,7 +695,7 @@
       message('msg-cafes', 'ok', 'Enregistré : ' + resume + '.');
       toast('✓ Enregistré : ' + resume);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      chargerEnCours();
+      chargerEnCours(false, true);
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
       oublierMdp(); afficherConnexion(r.erreur);
     } else if (r.nonRecu) {
@@ -726,8 +741,8 @@
   document.addEventListener('visibilitychange', () => {
     if (!etat.suiviActif) return;
     if (document.visibilityState === 'visible') {
-      if (!etat.cafes.length) rafraichirCafes();   // toujours pas de liste : nouvel essai à la reprise
-      afficherEnCours(); chargerEnCours(); demarrerRafraichissement();
+      if (!etat.cafes.length) rafraichirCafes(false, true);   // toujours pas de liste : nouvel essai à la reprise
+      afficherEnCours(); chargerEnCours(false, true); demarrerRafraichissement();
     }
     else arreterRafraichissement();
   });
@@ -735,10 +750,11 @@
 
   let lectureEncours = null;          // lecture « encours » en cours (on s'y rattache au lieu d'en lancer une 2e)
   let erreurActualiser = false;       // message d'erreur du bouton « Actualiser » affiché
-  async function chargerEnCours(manuel) {
+  async function chargerEnCours(manuel, direct) {
     if (!etat.motdepasse) return;
     if (manuel) occupe($('btn-actualiser'), true, 'Actualiser');
-    if (!lectureEncours) lectureEncours = lire({ action: 'encours' }).finally(() => { lectureEncours = null; });
+    // Une seule lecture « encours » à la fois : si une est déjà partie, on attend sa réponse (pas d'appel en double).
+    if (!lectureEncours) lectureEncours = lire({ action: 'encours' }, manuel || direct).finally(() => { lectureEncours = null; });
     const r = await lectureEncours;
     if (manuel) occupe($('btn-actualiser'), false, 'Actualiser');
     if (r.ok && Array.isArray(r.interventions)) {
@@ -751,7 +767,10 @@
       if (erreurActualiser) { erreurActualiser = false; message('msg-encours', '', ''); }
       afficherEnCours();
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
-      oublierMdp(); afficherConnexion(r.erreur);
+      // Mot de passe vidé : la lecture des cafés partie en même temps sera ignorée (pas de 2e écran).
+      oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
+      $('liste-encours').innerHTML = ''; $('etat-cafes').innerHTML = '';
+      afficherConnexion(r.erreur);
     } else if (manuel) {
       // Seul un clic sur « Actualiser » qui échoue affiche un message (la liste reste affichée).
       erreurActualiser = true;
@@ -895,7 +914,7 @@
     } else if (r.erreur === 'deja_terminee' || r.erreur === 'intervention_introuvable') {
       afficherEnCours();
       message('msg-encours', 'info', MESSAGES[r.erreur]);
-      chargerEnCours();
+      chargerEnCours(false, true);
     } else if (r.erreur === 'reseau' || r.erreur === 'delai') {
       afficherEnCours();
       message('msg-encours', 'erreur', 'Impossible de joindre le serveur : l’annulation de ' + i.cafe + ' n’est pas confirmée. Rien ne sera fait en double.',
@@ -909,14 +928,16 @@
   /* ---------- Démarrage ---------- */
   // Affichage IMMÉDIAT : aucune attente du script. Les 4 cartes et le formulaire s'affichent
   // avec la dernière liste de cafés enregistrée ; la liste (et le mot de passe) sont vérifiés
-  // ensuite en arrière-plan, puis les « Interventions en cours » se chargent.
+  // ensuite en arrière-plan, en même temps que les « Interventions en cours ».
   function demarrer() {
     etat.motdepasse = lireMdp();
     if (!etat.motdepasse) { afficherConnexion(); return; }
     const stock = lireCafesStockes();
     if (stock) appliquerCafes(stock.cafes);
-    rafraichirCafes();      // 1re lecture de la file : cafés (vérifie aussi le mot de passe)
-    afficherEncodage();     // affichage tout de suite ; « encours » passe en 2e dans la file
+    // Les deux lectures partent EN MÊME TEMPS (aucune n'attend l'autre) ; chacune vérifie aussi
+    // le mot de passe enregistré.
+    rafraichirCafes(false, true);   // liste des cafés : mise à jour en arrière-plan
+    afficherEncodage();             // affichage tout de suite + lecture « encours » en parallèle
   }
   dessinerMachines();
   demarrer();
