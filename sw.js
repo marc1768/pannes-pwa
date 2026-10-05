@@ -2,12 +2,13 @@
 // Met en cache UNIQUEMENT les fichiers de l'interface (même origine).
 // Les appels au script Google (script.google.com / googleusercontent.com) ne sont jamais interceptés.
 //
+// v8 : version de cache relevée (titre v8, lecture rapide, appel « demarrage »).
 // v7 : version de cache relevée (démarrage en parallèle dans index.html).
 // v6 : ouverture instantanée. Les fichiers de l'interface sont servis TOUT DE SUITE depuis le cache,
 // puis remis à jour en arrière-plan depuis GitHub (la nouvelle version est utilisée à l'ouverture
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
-const VERSION = 'pannes-v7';
+const VERSION = 'pannes-v8';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
