@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes – Service technique</title>
+<title>Pannes v8 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -186,7 +186,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v8</small></h1>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
 </header>
 
@@ -289,6 +289,7 @@
   const RAFRAICHIR_MS = 60000;
   const ALERTE_APRES_MS = 180000;   // alerte discrète après 3 minutes sans lecture réussie
   const REESSAYER_APRES_MS = 15000; // premier chargement sans liste : bouton « Réessayer » après 15 s
+  const RELANCE_APRES_MS = 4000;    // lectures : sans réponse après 4 s, 2e appel identique (on garde le plus rapide)
 
   // Liste recopiée depuis AppSheet (colonne « Appareils café »), sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
@@ -362,9 +363,10 @@
   }
 
   /* ---------- Appels au script (POST texte, délai maximum, lecture texte puis JSON) ---------- */
-  async function appeler(corps, delaiMs) {
+  async function appeler(corps, delaiMs, signalExterne) {
     const ctrl = new AbortController();
     const minuteur = setTimeout(() => ctrl.abort(), delaiMs || DELAI_LECTURE_MS);
+    if (signalExterne) signalExterne.addEventListener('abort', () => ctrl.abort());
     try {
       const rep = await fetch(URL_SCRIPT, {
         method: 'POST',
@@ -376,6 +378,7 @@
       if (!rep.ok) return { ok: false, erreur: 'reseau' };
       try { return JSON.parse(texte); } catch (e) { return { ok: false, erreur: 'erreur_serveur' }; }
     } catch (e) {
+      if (signalExterne && signalExterne.aborted) return { ok: false, erreur: 'annule' };
       return { ok: false, erreur: e && e.name === 'AbortError' ? 'delai' : 'reseau' };
     } finally {
       clearTimeout(minuteur);
@@ -383,36 +386,57 @@
   }
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Lectures (cafés, interventions en cours) :
-  //  - rafraîchissements automatiques (toutes les 60 s) : jamais deux en même temps (chacune attend
-  //    la fin de la précédente), délai 25 s, et UN nouvel essai silencieux en cas d'échec réseau ;
-  //  - lectures « directes » (ouverture de la PWA, retour au premier plan, Actualiser, Réessayer) :
-  //    lancées TOUT DE SUITE, en parallèle, sans file d'attente. Un seul nouvel essai, et seulement
-  //    si le réseau a échoué immédiatement (jamais après un délai dépassé : pas de 25 s + 25 s).
-  // Les écritures (envoyer, annuler, statut) n'y passent pas : leur comportement ne change pas.
-  let fileLectures = Promise.resolve();
-  async function lireDirect(corps) {
+  // LECTURES uniquement (demarrage, cafés, interventions en cours) — « lecture rapide » :
+  //  - 1er appel tout de suite ; sans réponse après 4 s, un 2e appel IDENTIQUE part en parallèle,
+  //    on garde la réponse la plus rapide et on abandonne l'autre ;
+  //  - erreur immédiate (réseau, erreur serveur) : UN nouvel essai automatique après 1,5 s ;
+  //  - au plus 3 appels, jamais d'attente cumulée de 25 s + 25 s.
+  // Les écritures (envoyer, annuler, statut) n'y passent JAMAIS : identifiant unique, un seul appel,
+  // puis vérification avant d'afficher une erreur (comportement inchangé).
+  const DEFINITIVES = { mot_de_passe: 1, bloque: 1, action_inconnue: 1, colonne_manquante: 1 };
+  function lireRapide(corps) {
     const mdp = etat.motdepasse;
-    let r = await appeler(corps, DELAI_LECTURE_MS);
-    if (!r.ok && r.erreur === 'reseau' && etat.motdepasse === mdp) {
-      await pause(1500);
-      if (etat.motdepasse !== mdp) return { ok: false, erreur: 'annule' };
-      r = await appeler(corps, DELAI_LECTURE_MS);
-    }
-    return r;
+    return new Promise((resolve) => {
+      const ctrls = [];
+      let fini = false, enVol = 0, prevus = 0, essaiErreur = 0, derniere = { ok: false, erreur: 'delai' };
+      const finir = (r) => {
+        if (fini) return;
+        fini = true; clearTimeout(relance);
+        ctrls.forEach((c) => c.abort());                  // on abandonne l'appel le plus lent
+        resolve(r);
+      };
+      const peutFinir = () => { if (!fini && enVol === 0 && prevus === 0) finir(derniere); };
+      const lancer = () => {
+        prevus--;
+        if (fini) return;
+        if (etat.motdepasse !== mdp) return finir({ ok: false, erreur: 'annule' });
+        const c = new AbortController(); ctrls.push(c); enVol++;
+        appeler(corps, DELAI_LECTURE_MS, c.signal).then((r) => {
+          enVol--;
+          if (fini) return;
+          if (r.ok || DEFINITIVES[r.erreur]) return finir(r);
+          derniere = r;
+          if ((r.erreur === 'reseau' || r.erreur === 'erreur_serveur') && essaiErreur < 1) {
+            essaiErreur++; prevus++; setTimeout(lancer, 1500);
+          }
+          peutFinir();
+        });
+      };
+      prevus = 2;                                          // le 1er appel + le 2e appel de secours
+      const relance = setTimeout(lancer, RELANCE_APRES_MS);
+      lancer();
+    });
   }
+  // Lectures « directes » (ouverture, retour au premier plan, Actualiser, Réessayer, connexion) :
+  // tout de suite, en parallèle. Rafraîchissement automatique (60 s) : une lecture à la fois.
+  let fileLectures = Promise.resolve();
   function lire(corps, direct) {
-    if (direct) return lireDirect(corps);
+    if (direct) return lireRapide(corps);
     const mdp = etat.motdepasse;
-    const tache = fileLectures.then(async () => {
+    const tache = fileLectures.then(() => {
       // Mot de passe refusé ou déconnexion entre-temps : on n'envoie pas (pas d'essai raté en plus).
       if (etat.motdepasse !== mdp) return { ok: false, erreur: 'annule' };
-      let r = await appeler(corps, DELAI_LECTURE_MS);
-      if (!r.ok && (r.erreur === 'reseau' || r.erreur === 'delai' || r.erreur === 'erreur_serveur')) {
-        await pause(3000);
-        r = await appeler(corps, DELAI_LECTURE_MS);
-      }
-      return r;
+      return lireRapide(corps);
     });
     fileLectures = tache.catch(() => {});
     return tache;
@@ -460,14 +484,14 @@
     message('msg-connexion', 'erreur', erreur ? MESSAGES[erreur] || MESSAGES.erreur_serveur : '');
     setTimeout(() => $('mdp').focus(), 50);
   }
-  function afficherEncodage() {
+  function afficherEncodage(sourceEncours) {
     $('ecran-connexion').classList.add('cache');
     $('ecran-encodage').classList.remove('cache');
     $('btn-deconnexion').classList.remove('cache');
     revenirAuxTypes();
     etat.suiviActif = true;
     etat.debutSuivi = Date.now();
-    chargerEnCours(false, true);   // lecture directe, en parallèle de la liste des cafés
+    chargerEnCours(false, true, sourceEncours);   // lecture directe (ou réponse « demarrage »)
     demarrerRafraichissement();
   }
 
@@ -488,15 +512,15 @@
   // explicitement "mot_de_passe" ou "bloque" ; un délai dépassé ou une erreur réseau garde la
   // liste précédente, sans message.
   const suiviCafes = { promesse: null, debut: 0, echec: false, minuteur: null };
-  function rafraichirCafes(manuel, direct) {
+  function rafraichirCafes(manuel, direct, source) {
     if (!etat.motdepasse) return Promise.resolve({ ok: false });
-    if (suiviCafes.promesse && !manuel) return suiviCafes.promesse;
+    if (suiviCafes.promesse && !manuel && !source) return suiviCafes.promesse;
     const mdp = etat.motdepasse;
     suiviCafes.debut = Date.now(); suiviCafes.echec = false;
     clearTimeout(suiviCafes.minuteur);
     suiviCafes.minuteur = setTimeout(afficherEtatCafes, REESSAYER_APRES_MS + 50);   // fait apparaître « Réessayer »
     // Ouverture et « Réessayer » : lecture directe, sans attendre dans la file des lectures.
-    const p = lire({ action: 'cafes' }, manuel || direct).then((r) => {
+    const p = (source || lire({ action: 'cafes' }, manuel || direct)).then((r) => {
       if (suiviCafes.promesse === p) suiviCafes.promesse = null;
       if (etat.motdepasse !== mdp) return r;               // déconnecté entre-temps : réponse ignorée
       if (r.ok && Array.isArray(r.cafes) && r.cafes.length) {
@@ -750,13 +774,17 @@
 
   let lectureEncours = null;          // lecture « encours » en cours (on s'y rattache au lieu d'en lancer une 2e)
   let erreurActualiser = false;       // message d'erreur du bouton « Actualiser » affiché
-  async function chargerEnCours(manuel, direct) {
+  async function chargerEnCours(manuel, direct, source) {
     if (!etat.motdepasse) return;
+    const mdp = etat.motdepasse;
     if (manuel) occupe($('btn-actualiser'), true, 'Actualiser');
     // Une seule lecture « encours » à la fois : si une est déjà partie, on attend sa réponse (pas d'appel en double).
-    if (!lectureEncours) lectureEncours = lire({ action: 'encours' }, manuel || direct).finally(() => { lectureEncours = null; });
+    if (source) lectureEncours = source.finally(() => { if (lectureEncours === encoursSource) lectureEncours = null; });
+    else if (!lectureEncours) lectureEncours = lire({ action: 'encours' }, manuel || direct).finally(() => { lectureEncours = null; });
+    const encoursSource = lectureEncours;
     const r = await lectureEncours;
     if (manuel) occupe($('btn-actualiser'), false, 'Actualiser');
+    if (etat.motdepasse !== mdp) return;               // déconnecté entre-temps (ex. mot de passe refusé ailleurs)
     if (r.ok && Array.isArray(r.interventions)) {
       etat.encours = r.interventions;
       const presentes = new Set(r.interventions.map(cleInter));
@@ -928,16 +956,21 @@
   /* ---------- Démarrage ---------- */
   // Affichage IMMÉDIAT : aucune attente du script. Les 4 cartes et le formulaire s'affichent
   // avec la dernière liste de cafés enregistrée ; la liste (et le mot de passe) sont vérifiés
-  // ensuite en arrière-plan, en même temps que les « Interventions en cours ».
+  // ensuite en arrière-plan, dans le même appel que les « Interventions en cours ».
   function demarrer() {
     etat.motdepasse = lireMdp();
     if (!etat.motdepasse) { afficherConnexion(); return; }
     const stock = lireCafesStockes();
     if (stock) appliquerCafes(stock.cafes);
-    // Les deux lectures partent EN MÊME TEMPS (aucune n'attend l'autre) ; chacune vérifie aussi
-    // le mot de passe enregistré.
-    rafraichirCafes(false, true);   // liste des cafés : mise à jour en arrière-plan
-    afficherEncodage();             // affichage tout de suite + lecture « encours » en parallèle
+    // UN SEUL appel « demarrage » (cafés + interventions + vérification du mot de passe), en lecture
+    // rapide. Si le script ne connaît pas encore cette action, 2 lectures parallèles à la place.
+    const p = lire({ action: 'demarrage' }, true);
+    const pCafes = p.then((r) => r.erreur === 'action_inconnue' ? lire({ action: 'cafes' }, true)
+                                : (r.ok ? { ok: true, cafes: r.cafes } : r));
+    const pEncours = p.then((r) => r.erreur === 'action_inconnue' ? lire({ action: 'encours' }, true)
+                                  : (r.ok ? (r.encours || { ok: false, erreur: 'erreur_serveur' }) : r));
+    rafraichirCafes(false, true, pCafes);   // liste des cafés : mise à jour en arrière-plan
+    afficherEncodage(pEncours);              // affichage tout de suite ; interventions dès la réponse
   }
   dessinerMachines();
   demarrer();
