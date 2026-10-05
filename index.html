@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v8 – Service technique</title>
+<title>Pannes v9 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -186,7 +186,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v8</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v9</small></h1>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
 </header>
 
@@ -281,15 +281,28 @@
 (() => {
   'use strict';
 
-  // URL du script Google (déploiement « Application Web », finit par /exec).
-  const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxh_B8_LeDhOZ-Gzufb1b0rygihEjs1MRibNG6n368xVQzUi4LCh9cPJv5tjChQ69o/exec';
+  // ===== DESTINATION DES APPELS : 'relais' (Cloudflare) ou 'script' (Google Apps Script) =====
+  // Revenir au script Google = remplacer 'relais' par 'script' sur cette ligne, rien d'autre.
+  const DESTINATION = 'relais';
 
-  const DELAI_ENVOI_MS = 12000;   // au-delà, on demande au script si l'envoi est arrivé
-  const DELAI_LECTURE_MS = 25000;   // lectures (cafés, interventions) : Google répond parfois en 5 à 11 s
+  // Adresse et délais propres à chaque destination (le protocole est identique).
+  const DESTINATIONS = {
+    // Relais Cloudflare : répond en 0,3 à 2 s.
+    relais: { url: 'https://pannes-relais.marc-dongiovanni.workers.dev',
+              envoiMs: 10000, lectureMs: 10000, relanceMs: 2500 },
+    // Script Google (déploiement « Application Web », /exec) : répond parfois en 5 à 11 s.
+    script: { url: 'https://script.google.com/macros/s/AKfycbxh_B8_LeDhOZ-Gzufb1b0rygihEjs1MRibNG6n368xVQzUi4LCh9cPJv5tjChQ69o/exec',
+              envoiMs: 12000, lectureMs: 25000, relanceMs: 4000 }
+  };
+  const CIBLE = DESTINATIONS[DESTINATION] || DESTINATIONS.relais;
+  const URL_SERVEUR = CIBLE.url;
+
+  const DELAI_ENVOI_MS = CIBLE.envoiMs;       // au-delà, on demande au serveur si l'envoi est arrivé (statut)
+  const DELAI_LECTURE_MS = CIBLE.lectureMs;   // délai maximum d'une lecture (cafés, interventions)
   const RAFRAICHIR_MS = 60000;
   const ALERTE_APRES_MS = 180000;   // alerte discrète après 3 minutes sans lecture réussie
   const REESSAYER_APRES_MS = 15000; // premier chargement sans liste : bouton « Réessayer » après 15 s
-  const RELANCE_APRES_MS = 4000;    // lectures : sans réponse après 4 s, 2e appel identique (on garde le plus rapide)
+  const RELANCE_APRES_MS = CIBLE.relanceMs;   // lectures : sans réponse après ce délai, 2e appel identique (on garde le plus rapide)
 
   // Liste recopiée depuis AppSheet (colonne « Appareils café »), sans MACHINE A CAFE, LIVRAISON et ENTRETIEN.
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
@@ -362,13 +375,14 @@
     return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
   }
 
-  /* ---------- Appels au script (POST texte, délai maximum, lecture texte puis JSON) ---------- */
+  /* ---------- Appels au serveur : relais ou script (POST texte, délai maximum, lecture texte puis JSON) ---------- */
+  // POST en text/plain : requête « simple », sans pré-vérification CORS, acceptée par les deux destinations.
   async function appeler(corps, delaiMs, signalExterne) {
     const ctrl = new AbortController();
     const minuteur = setTimeout(() => ctrl.abort(), delaiMs || DELAI_LECTURE_MS);
     if (signalExterne) signalExterne.addEventListener('abort', () => ctrl.abort());
     try {
-      const rep = await fetch(URL_SCRIPT, {
+      const rep = await fetch(URL_SERVEUR, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(Object.assign({}, corps, { motdepasse: etat.motdepasse })),
@@ -387,10 +401,10 @@
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // LECTURES uniquement (demarrage, cafés, interventions en cours) — « lecture rapide » :
-  //  - 1er appel tout de suite ; sans réponse après 4 s, un 2e appel IDENTIQUE part en parallèle,
+  //  - 1er appel tout de suite ; sans réponse après RELANCE_APRES_MS (relais 2,5 s, script 4 s), un 2e appel IDENTIQUE part en parallèle,
   //    on garde la réponse la plus rapide et on abandonne l'autre ;
   //  - erreur immédiate (réseau, erreur serveur) : UN nouvel essai automatique après 1,5 s ;
-  //  - au plus 3 appels, jamais d'attente cumulée de 25 s + 25 s.
+  //  - au plus 3 appels, jamais d'attente cumulée (délai maximum : relais 10 s, script 25 s).
   // Les écritures (envoyer, annuler, statut) n'y passent JAMAIS : identifiant unique, un seul appel,
   // puis vérification avant d'afficher une erreur (comportement inchangé).
   const DEFINITIVES = { mot_de_passe: 1, bloque: 1, action_inconnue: 1, colonne_manquante: 1 };
