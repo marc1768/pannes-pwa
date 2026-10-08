@@ -3,6 +3,7 @@
 // Les appels au serveur (relais Cloudflare workers.dev, ou script Google) ne sont jamais interceptés :
 // autre domaine et méthode POST.
 //
+// v10 : version de cache relevée (titre v10, bloc « À compléter » des livraisons Horeca issues d'une vente comptoir).
 // v9 : version de cache relevée (titre v9, appels vers le relais Cloudflare par défaut).
 // v8 : version de cache relevée (titre v8, lecture rapide, appel « demarrage »).
 // v7 : version de cache relevée (démarrage en parallèle dans index.html).
@@ -10,7 +11,7 @@
 // puis remis à jour en arrière-plan depuis GitHub (la nouvelle version est utilisée à l'ouverture
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
-const VERSION = 'pannes-v9';
+const VERSION = 'pannes-v10';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

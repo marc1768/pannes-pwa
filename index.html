@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v9 – Service technique</title>
+<title>Pannes v10 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -15,7 +15,7 @@
     color-scheme: dark;
     --fond: #0b1016; --carte: #151d27; --carte2: #1c2633; --texte: #eef2f6; --doux: #a3b0bf; --bord: #2b3848;
     --entete: #070b10;
-    --panne: #ef4444; --cafe: #a855f7; --entretien: #3b82f6; --livraison: #22c55e;
+    --panne: #ef4444; --cafe: #a855f7; --entretien: #3b82f6; --livraison: #22c55e; --horeca: #14b8a6;
     --accent: #e2e8f0;
     --ok-fond: #0f2e1c; --ok-texte: #86efac; --err-fond: #3a1414; --err-texte: #fca5a5; --info-fond: #172338; --info-texte: #bfdbfe;
     --rayon: 18px; --ombre: 0 8px 28px rgba(0,0,0,.45);
@@ -93,6 +93,7 @@
   [data-type="MACHINE A CAFE"] { --c: var(--cafe); }
   [data-type="ENTRETIEN"] { --c: var(--entretien); }
   [data-type="LIVRAISON"] { --c: var(--livraison); }
+  [data-type="LIVRAISON HORECA"] { --c: var(--horeca); }
 
   .entete-form { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
   .pastille { background: var(--accent); color: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 750; display: inline-flex; gap: 8px; align-items: center; }
@@ -170,9 +171,42 @@
   .dialogue .oui { background: var(--panne); color: #fff; border-color: var(--panne) !important; }
   .dialogue .non { background: var(--carte2); color: var(--texte); }
   .inter .cafe span { color: var(--doux); font-weight: 400; }
+  .inter[data-type="LIVRAISON HORECA"] .badge { max-width: 92px; }
+  .inter[data-type="LIVRAISON HORECA"] .nature { -webkit-line-clamp: 3; }
   .inter .qui { color: var(--texte); font-size: .92rem; }
   .inter .depuis { color: var(--doux); font-size: .88rem; }
   .vide-encours { color: var(--doux); padding: 10px 0; }
+
+  /* À compléter : livraisons Horeca issues d'une vente comptoir */
+  #zone-completer { margin: 0 0 26px; }
+  .titre-completer { display: flex; align-items: center; gap: 10px; }
+  .titre-completer h2 { margin: 0; flex: 1; }
+  #zone-completer .aide { margin: 4px 0 14px; }
+  .liv {
+    background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--horeca); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; transition: opacity .2s;
+  }
+  .liv.en-annulation { opacity: .55; }
+  .liv .haut { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .liv .ticket { font-weight: 750; overflow-wrap: anywhere; }
+  .liv .montant { font-weight: 750; color: var(--horeca); white-space: nowrap; }
+  .liv .quand { color: var(--doux); font-size: .88rem; }
+  .liv .produits { font-size: .92rem; overflow-wrap: anywhere; }
+  .liv .actions { display: flex; gap: 10px; margin-top: 8px; }
+  .liv .actions button { min-height: 46px; border-radius: 12px; font-weight: 750; cursor: pointer; border: 1px solid var(--bord); padding: 0 14px; }
+  .liv .attribuer { flex: 1; background: var(--horeca); border-color: var(--horeca) !important; color: #04201c; }
+  .liv .refuser-liv { background: var(--carte2); color: var(--texte); min-width: 104px; }
+  .liv .actions button:disabled { opacity: .6; cursor: wait; }
+  #msg-completer .message button, #msg-attribuer .message button { min-height: 44px; }
+
+  .dialogue.large { max-width: 460px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .dialogue .resume-liv { margin: 0 0 14px; color: var(--doux); overflow-wrap: anywhere; }
+  .dialogue .liste-cafes { max-height: 34vh; }
+  .dialogue .choisi button { min-height: 44px; padding: 0 8px; }
+  .dialogue .case-liv { min-height: 48px; margin: 14px 0 6px; color: var(--texte); }
+  .dialogue .case-liv input { width: 24px; height: 24px; flex: none; accent-color: var(--horeca); }
+  .dialogue .valider { background: var(--horeca); color: #04201c; border-color: var(--horeca) !important; }
+  .dialogue .valider:disabled, .dialogue .non:disabled { opacity: .5; cursor: not-allowed; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
@@ -186,7 +220,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v9</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v10</small></h1>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
 </header>
 
@@ -207,6 +241,14 @@
   <!-- Écran 2 : encodage + interventions en cours -->
   <section id="ecran-encodage" class="cache">
     <div id="choix-type">
+      <!-- À compléter : visible seulement quand il y a au moins une livraison Horeca à attribuer -->
+      <section id="zone-completer" class="cache" aria-live="polite">
+        <div class="titre-completer"><h2 id="titre-completer">À compléter (0)</h2></div>
+        <p class="aide">Ventes comptoir avec livraison : attribuez un café pour les transmettre aux techniciens.</p>
+        <div id="msg-completer"></div>
+        <div id="liste-completer"></div>
+      </section>
+
       <h2>Nouvelle intervention</h2>
       <p class="aide">Choisissez le type d'intervention.</p>
       <div class="types">
@@ -277,6 +319,27 @@
   </div>
 </div>
 
+<div id="voile-attribuer" class="voile cache">
+  <form id="form-attribuer" class="dialogue large" role="dialog" aria-modal="true" aria-labelledby="attr-titre" autocomplete="off">
+    <h3 id="attr-titre">Attribuer un café</h3>
+    <p id="attr-resume" class="resume-liv"></p>
+    <div id="attr-zone-recherche">
+      <input id="attr-recherche" type="search" placeholder="Rechercher un nom ou une ville…" role="combobox" aria-expanded="true" aria-controls="attr-liste" autocomplete="off">
+      <ul id="attr-liste" class="liste-cafes" role="listbox"></ul>
+    </div>
+    <div id="attr-choisi" class="choisi cache">
+      <div><strong id="attr-cafe-nom"></strong><span id="attr-cafe-ville"></span></div>
+      <button id="attr-autre" type="button">Changer</button>
+    </div>
+    <label class="case case-liv"><input id="attr-encaisser" type="checkbox"><span id="attr-encaisser-texte"></span></label>
+    <div id="msg-attribuer"></div>
+    <div class="boutons">
+      <button id="attr-fermer" class="non" type="button">Fermer</button>
+      <button id="attr-valider" class="valider" type="submit" disabled>Valider</button>
+    </div>
+  </form>
+</div>
+
 <script>
 (() => {
   'use strict';
@@ -296,6 +359,9 @@
   };
   const CIBLE = DESTINATIONS[DESTINATION] || DESTINATIONS.relais;
   const URL_SERVEUR = CIBLE.url;
+  // Le bloc « À compléter » (actions incompletes, completer, annuler_incomplet) n'existe que sur le relais :
+  // le script Google de secours ne les connaît pas, le bloc reste alors caché.
+  const AVEC_INCOMPLETES = CIBLE === DESTINATIONS.relais;
 
   const DELAI_ENVOI_MS = CIBLE.envoiMs;       // au-delà, on demande au serveur si l'envoi est arrivé (statut)
   const DELAI_LECTURE_MS = CIBLE.lectureMs;   // délai maximum d'une lecture (cafés, interventions)
@@ -308,8 +374,8 @@
   const MACHINES = ['INDETERMINE', 'MONTANA LUXE II', 'DAYTONA', 'NEVADA', 'ZEUS', 'ARIZONA', 'MK3', 'MK4',
     'ACTION PACK', 'TOP MACHINE', 'GREYHOUND', 'TEXAS', 'KICKER', 'BILLARD', 'FLECHE', 'AUTRE'];
 
-  const COULEURS = { 'PANNE': '#ef4444', 'MACHINE A CAFE': '#a855f7', 'ENTRETIEN': '#3b82f6', 'LIVRAISON': '#22c55e' };
-  const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison' };
+  const COULEURS = { 'PANNE': '#ef4444', 'MACHINE A CAFE': '#a855f7', 'ENTRETIEN': '#3b82f6', 'LIVRAISON': '#22c55e', 'LIVRAISON HORECA': '#14b8a6' };
+  const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison', 'LIVRAISON HORECA': 'Livraison Horeca' };
   const ICONES = {
     'PANNE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
     'MACHINE A CAFE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v3M12 2v3"/></svg>',
@@ -329,13 +395,20 @@
     deja_terminee: 'Cette intervention est déjà terminée.',
     deja_annulee: 'Cette intervention était déjà annulée.',
     intervention_introuvable: 'Intervention introuvable : elle a peut-être été modifiée. La liste a été actualisée.',
-    delai: 'Le serveur ne répond pas.'
+    delai: 'Le serveur ne répond pas.',
+    deja_completee: 'Cette livraison a déjà été complétée. La liste a été actualisée.',
+    montant_inconnu: 'Le montant de cette vente est inconnu : décochez « À encaisser » ou prévenez Marc.',
+    id_invalide: 'Identifiant d’envoi invalide. Rechargez la page et réessayez.'
   };
 
   const $ = (id) => document.getElementById(id);
   const etat = { motdepasse: '', cafes: [], type: '', cafe: null, machines: new Set(['INDETERMINE']),
                  envoiEnCours: false, envoi: null, encours: null, encoursRecu: 0, encoursDecalage: 0,
-                 annulations: new Map(), masquees: new Set(), suiviActif: false, debutSuivi: 0 };
+                 annulations: new Map(), masquees: new Set(), suiviActif: false, debutSuivi: 0,
+                 // « À compléter » : liste reçue du relais, tickets déjà traités ici (masqués jusqu'à ce que le relais ne les renvoie plus),
+                 // annulations en cours, identifiants d'envoi en attente de confirmation (un par ticket), fenêtre d'attribution ouverte
+                 incompletes: null, incompTraitees: new Set(), annulLiv: new Map(), completions: new Map(), attrib: null,
+                 sansIncompletes: false };
 
   /* ---------- Stockage du mot de passe ---------- */
   const CLE = 'pannes_mdp';
@@ -491,6 +564,7 @@
   function afficherConnexion(erreur) {
     etat.suiviActif = false;
     arreterRafraichissement();
+    reinitIncompletes();
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
     $('ecran-connexion').classList.remove('cache');
@@ -506,6 +580,10 @@
     etat.suiviActif = true;
     etat.debutSuivi = Date.now();
     chargerEnCours(false, true, sourceEncours);   // lecture directe (ou réponse « demarrage »)
+    // « À compléter » : au démarrage, seulement APRÈS la réponse « demarrage » (qui vérifie le mot de passe) : un mot de passe
+    // refusé ne compte ainsi qu'un seul échec. Après une connexion (pas de source), le mot de passe vient d'être vérifié.
+    if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerIncompletes(false, true); });
+    else chargerIncompletes(false, true);
     demarrerRafraichissement();
   }
 
@@ -578,6 +656,7 @@
     zone.innerHTML = '';
     if (!etat.cafes.length && etat.motdepasse) zone.appendChild(indicateurCafes('div'));
     if (!$('form-envoi').classList.contains('cache') && !etat.cafe) filtrer();
+    if (etat.attrib && !etat.attrib.cafe) filtrerAttrib();
   }
 
   $('form-connexion').addEventListener('submit', async (ev) => {
@@ -638,14 +717,18 @@
   /* ---------- Recherche des cafés ---------- */
   const normaliser = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let actif = -1;
+  // Même filtrage pour la recherche du formulaire et pour la fenêtre « Attribuer un café » : tous les mots, nom ou ville, 80 résultats.
+  function chercherCafes(texte) {
+    const mots = normaliser(texte).trim().split(/\s+/).filter(Boolean);
+    return etat.cafes.filter((c) => { const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m)); }).slice(0, 80);
+  }
   function filtrer() {
     if (!etat.cafes.length) {
       const ul0 = $('liste-cafes'); ul0.innerHTML = ''; actif = -1;
       if (etat.motdepasse) ul0.appendChild(indicateurCafes('li'));
       return;
     }
-    const mots = normaliser($('recherche').value).trim().split(/\s+/).filter(Boolean);
-    const res = etat.cafes.filter((c) => { const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m)); }).slice(0, 80);
+    const res = chercherCafes($('recherche').value);
     const ul = $('liste-cafes'); ul.innerHTML = ''; actif = res.length ? 0 : -1;
     if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
     res.forEach((c, i) => {
@@ -768,7 +851,7 @@
   function demarrerRafraichissement() {
     arreterRafraichissement();
     if (document.visibilityState !== 'visible') return;   // en pause : reprise à l'ouverture
-    minuteurEncours = setInterval(() => chargerEnCours(), RAFRAICHIR_MS);
+    minuteurEncours = setInterval(() => { chargerEnCours(); chargerIncompletes(); }, RAFRAICHIR_MS);
     // Sans réseau : met à jour « il y a N min » et les durées « depuis » des cartes.
     minuteurAffichage = setInterval(() => afficherEnCours(), 30000);
   }
@@ -780,11 +863,11 @@
     if (!etat.suiviActif) return;
     if (document.visibilityState === 'visible') {
       if (!etat.cafes.length) rafraichirCafes(false, true);   // toujours pas de liste : nouvel essai à la reprise
-      afficherEnCours(); chargerEnCours(false, true); demarrerRafraichissement();
+      afficherEnCours(); chargerEnCours(false, true); chargerIncompletes(false, true); demarrerRafraichissement();
     }
     else arreterRafraichissement();
   });
-  $('btn-actualiser').addEventListener('click', () => chargerEnCours(true));
+  $('btn-actualiser').addEventListener('click', () => { chargerEnCours(true); chargerIncompletes(true); });
 
   let lectureEncours = null;          // lecture « encours » en cours (on s'y rattache au lieu d'en lancer une 2e)
   let erreurActualiser = false;       // message d'erreur du bouton « Actualiser » affiché
@@ -913,15 +996,20 @@
   function demanderAnnulation(i) {
     if (etat.annulations.has(cleInter(i))) return;
     aConfirmer = i;
+    $('dlg-titre').textContent = 'Annuler cette intervention ?';
     $('dlg-texte').textContent = i.cafe + ' – ' + (LIBELLES[i.type] || i.type);
     $('voile-annuler').classList.remove('cache');
     setTimeout(() => $('dlg-non').focus(), 30);
   }
-  function fermerDialogue() { $('voile-annuler').classList.add('cache'); aConfirmer = null; }
+  let aConfirmerLiv = null;   // livraison « À compléter » dont l'annulation attend la confirmation (même boîte de dialogue)
+  function fermerDialogue() { $('voile-annuler').classList.add('cache'); aConfirmer = null; aConfirmerLiv = null; }
   $('dlg-non').addEventListener('click', fermerDialogue);
   $('voile-annuler').addEventListener('click', (ev) => { if (ev.target === $('voile-annuler')) fermerDialogue(); });
-  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && aConfirmer) fermerDialogue(); });
-  $('dlg-oui').addEventListener('click', () => { const i = aConfirmer; fermerDialogue(); if (i) annulerIntervention(i); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && (aConfirmer || aConfirmerLiv)) fermerDialogue(); });
+  $('dlg-oui').addEventListener('click', () => {
+    const i = aConfirmer, l = aConfirmerLiv; fermerDialogue();
+    if (l) annulerLivraison(l); else if (i) annulerIntervention(i);
+  });
 
   function licencePour(i) {
     const n = String(i.cafe).toUpperCase(), v = String(i.ville).toUpperCase();
@@ -965,6 +1053,282 @@
       afficherEnCours();
       message('msg-encours', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', () => annulerIntervention(i, demande));
     }
+  }
+
+  /* ---------- À compléter : livraisons Horeca issues d'une vente comptoir ---------- */
+  // Le relais crée une ligne « LIVRAISON HORECA » en « Incomplet » pour chaque vente comptoir contenant l'article LIVTECH.
+  // Ici : la liste (action incompletes), l'attribution d'un café (completer) et l'annulation (annuler_incomplet).
+  const ERREURS_RESEAU = { reseau: 1, delai: 1, erreur_serveur: 1 };
+  const eur = (n) => Number(n).toFixed(2).replace('.', ',') + ' €';
+  const montantConnu = (l) => typeof l.montant === 'number' && isFinite(l.montant);
+  // « 2026-10-08T14:32:10 » (heure de Bruxelles, donnée telle quelle par le relais) -> « 08/10/2026 14:32 »
+  function dateHeure(iso) {
+    const m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)/.exec(String(iso || ''));
+    return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : '';
+  }
+  function resumeProduits(produits) {
+    const liste = (Array.isArray(produits) ? produits : []).filter((p) => p && p.produit);
+    if (!liste.length) return '';
+    const qte = (q) => { const n = Number(q); return Number.isInteger(n) ? String(n) : String(n).replace('.', ','); };
+    const texte = liste.slice(0, 4).map((p) => qte(p.quantite) + ' × ' + p.produit);   // « 2 × » jamais coupé en fin de ligne
+    if (liste.length > 4) texte.push('+ ' + (liste.length - 4) + ' autre' + (liste.length - 4 > 1 ? 's' : ''));
+    return texte.join(' · ');
+  }
+  function deconnecterPour(erreur) {
+    oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
+    $('liste-encours').innerHTML = ''; $('etat-cafes').innerHTML = '';
+    afficherConnexion(erreur);
+  }
+  function reinitIncompletes() {
+    etat.incompletes = null; etat.sansIncompletes = false;
+    etat.incompTraitees.clear(); etat.annulLiv.clear(); etat.completions.clear();
+    if (etat.attrib) fermerAttribution(true);
+    $('zone-completer').classList.add('cache'); $('liste-completer').innerHTML = ''; message('msg-completer', '', '');
+  }
+
+  // Lecture : même logique que « en cours » (une lecture à la fois, lecture rapide, échec automatique silencieux,
+  // la dernière liste reçue reste affichée).
+  let lectureIncompletes = null;
+  async function chargerIncompletes(manuel, direct) {
+    if (!AVEC_INCOMPLETES || etat.sansIncompletes || !etat.motdepasse) return;
+    const mdp = etat.motdepasse;
+    if (!lectureIncompletes) lectureIncompletes = lire({ action: 'incompletes' }, manuel || direct).finally(() => { lectureIncompletes = null; });
+    const r = await lectureIncompletes;
+    if (etat.motdepasse !== mdp) return;
+    if (r.ok && Array.isArray(r.incompletes)) {
+      etat.incompletes = r.incompletes;
+      const presentes = new Set(r.incompletes.map((l) => l.ticket));
+      etat.incompTraitees.forEach((t) => { if (!presentes.has(t)) etat.incompTraitees.delete(t); });
+      afficherIncompletes();
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      deconnecterPour(r.erreur);
+    } else if (r.erreur === 'action_inconnue') {
+      etat.sansIncompletes = true; etat.incompletes = null; afficherIncompletes();   // relais sans ces actions : bloc caché, plus d'appel
+    }
+    // autre erreur : silencieuse, la liste affichée reste valable
+  }
+
+  function afficherIncompletes() {
+    const visibles = (etat.incompletes || []).filter((l) => !etat.incompTraitees.has(l.ticket))
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.ticket).localeCompare(String(b.ticket)));
+    const liste = $('liste-completer');
+    liste.innerHTML = '';
+    $('zone-completer').classList.toggle('cache', !AVEC_INCOMPLETES || !visibles.length);
+    $('titre-completer').textContent = 'À compléter (' + visibles.length + ')';
+    visibles.forEach((l) => liste.appendChild(carteLivraison(l)));
+  }
+  function carteLivraison(l) {
+    const d = document.createElement('div'); d.className = 'liv';
+    const haut = document.createElement('div'); haut.className = 'haut';
+    const t = document.createElement('span'); t.className = 'ticket'; t.textContent = 'Ticket ' + l.ticket;
+    haut.appendChild(t);
+    if (montantConnu(l)) { const m = document.createElement('span'); m.className = 'montant'; m.textContent = eur(l.montant); haut.appendChild(m); }
+    d.appendChild(haut);
+    const quand = dateHeure(l.date);
+    if (quand) { const e = document.createElement('div'); e.className = 'quand'; e.textContent = quand; d.appendChild(e); }
+    const resume = resumeProduits(l.produits);
+    if (resume) { const e = document.createElement('div'); e.className = 'produits'; e.textContent = resume; d.appendChild(e); }
+    const actions = document.createElement('div'); actions.className = 'actions';
+    const a = document.createElement('button'); a.type = 'button'; a.className = 'attribuer'; a.textContent = 'Attribuer un café';
+    a.setAttribute('aria-label', 'Attribuer un café à la livraison ' + l.ticket);
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'refuser-liv';
+    x.setAttribute('aria-label', 'Annuler la livraison ' + l.ticket);
+    if (etat.annulLiv.has(l.ticket)) {
+      d.classList.add('en-annulation'); a.disabled = true; x.disabled = true; x.innerHTML = '<span class="chargement"></span>';
+    } else {
+      x.textContent = 'Annuler';
+      a.addEventListener('click', () => ouvrirAttribution(l));
+      x.addEventListener('click', () => demanderAnnulationLivraison(l));
+    }
+    actions.append(a, x); d.appendChild(actions);
+    return d;
+  }
+
+  /* --- Annuler une ligne « Incomplet » (erreur de vente) --- */
+  function demanderAnnulationLivraison(l) {
+    if (etat.annulLiv.has(l.ticket)) return;
+    aConfirmer = null; aConfirmerLiv = l;
+    $('dlg-titre').textContent = 'Annuler cette livraison ?';
+    $('dlg-texte').textContent = 'Elle ne sera pas transmise aux techniciens.';
+    $('voile-annuler').classList.remove('cache');
+    setTimeout(() => $('dlg-non').focus(), 30);
+  }
+  async function annulerLivraison(l) {
+    const ticket = l.ticket;
+    if (etat.annulLiv.has(ticket)) return;
+    etat.annulLiv.set(ticket, true);
+    message('msg-completer', '', '');
+    afficherIncompletes();
+    // Le relais n'a pas d'identifiant pour cette action : elle est naturellement sans doublon (« deja_annulee » au 2e appel).
+    const corps = { action: 'annuler_incomplet', ticket: ticket };
+    let r = await appeler(corps, DELAI_ENVOI_MS);
+    // Réponse perdue : on redemande ; « deja_annulee » après une réponse perdue = notre 1re demande a abouti.
+    for (let essai = 0; essai < 5 && !r.ok && ERREURS_RESEAU[r.erreur]; essai++) { await pause(2000); r = await appeler(corps, DELAI_ENVOI_MS); }
+    etat.annulLiv.delete(ticket);
+    console.info('[PWA] annulation livraison ' + ticket + ' : ' + JSON.stringify(r));
+    if (r.ok || r.erreur === 'deja_annulee') {
+      etat.incompTraitees.add(ticket);
+      afficherIncompletes();
+      // Même texte dans les deux cas : le navigateur peut renvoyer seul une demande dont la réponse s'est perdue,
+      // et « deja_annulee » ne permet pas de savoir si c'est cette demande ou une autre qui a annulé. Le résultat est le même.
+      const texte = 'Livraison annulée : ticket ' + ticket + '.';
+      message('msg-cafes', 'ok', texte);
+      toast('✓ ' + texte);
+      chargerIncompletes(false, true);
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      deconnecterPour(r.erreur);
+    } else if (r.erreur === 'deja_completee' || r.erreur === 'intervention_introuvable') {
+      etat.incompTraitees.add(ticket);
+      afficherIncompletes();
+      message('msg-cafes', 'info', MESSAGES[r.erreur]);
+      chargerIncompletes(false, true); chargerEnCours(false, true);
+    } else if (ERREURS_RESEAU[r.erreur] && r.erreur !== 'erreur_serveur') {
+      afficherIncompletes();
+      message('msg-completer', 'erreur', 'Impossible de joindre le serveur : l’annulation de la livraison ' + ticket + ' n’est pas confirmée. Rien ne sera fait en double.',
+              'Réessayer', () => annulerLivraison(l));
+    } else {
+      afficherIncompletes();
+      message('msg-completer', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', () => annulerLivraison(l));
+    }
+  }
+
+  /* --- Attribuer un café --- */
+  // Un envoi = un identifiant, par ticket et pour une même saisie (ticket, café, case « À encaisser »). « Réessayer » réutilise
+  // TOUJOURS le même identifiant : le relais ne complète jamais deux fois. Une saisie différente reçoit un nouvel identifiant.
+  const attr = (k) => $('attr-' + k);
+  let actifAttr = -1;
+  function ouvrirAttribution(l) {
+    if (etat.attrib) return;
+    etat.attrib = { liv: l, cafe: null, enCours: false };
+    attr('resume').textContent = 'Ticket ' + l.ticket + (montantConnu(l) ? ' · ' + eur(l.montant) : '');
+    attr('encaisser-texte').textContent = 'À encaisser auprès du client' + (montantConnu(l) ? ' : ' + eur(l.montant) : '');
+    attr('encaisser').checked = false;
+    attr('recherche').value = '';
+    message('msg-attribuer', '', '');
+    afficherCafeAttrib();
+    filtrerAttrib();
+    $('voile-attribuer').classList.remove('cache');
+    setTimeout(() => { if (etat.attrib && !etat.attrib.cafe) attr('recherche').focus(); }, 50);
+  }
+  function fermerAttribution(force) {
+    const a = etat.attrib;
+    if (!a || (a.enCours && !force)) return;
+    etat.attrib = null;
+    $('voile-attribuer').classList.add('cache');
+    message('msg-attribuer', '', '');
+  }
+  function afficherCafeAttrib() {
+    const a = etat.attrib, c = a && a.cafe;
+    attr('zone-recherche').classList.toggle('cache', !!c);
+    attr('choisi').classList.toggle('cache', !c);
+    if (c) { attr('cafe-nom').textContent = c.nom; attr('cafe-ville').textContent = ' ' + c.ville; }
+    attr('valider').disabled = !c || !!(a && a.enCours);
+  }
+  function filtrerAttrib() {
+    const ul = attr('liste'); ul.innerHTML = ''; actifAttr = -1;
+    if (!etat.cafes.length) { if (etat.motdepasse) ul.appendChild(indicateurCafes('li')); return; }
+    const res = chercherCafes(attr('recherche').value);
+    if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
+    actifAttr = 0;
+    res.forEach((c, i) => {
+      const li = document.createElement('li'); li.setAttribute('role', 'option'); if (i === 0) li.classList.add('actif');
+      const n = document.createElement('span'); n.textContent = c.nom;
+      const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
+      li.append(n, v); li.addEventListener('click', () => choisirCafeAttrib(c)); li._cafe = c; ul.appendChild(li);
+    });
+  }
+  function choisirCafeAttrib(c) {
+    const a = etat.attrib;
+    if (!a || a.enCours) return;
+    a.cafe = c; afficherCafeAttrib(); message('msg-attribuer', '', '');
+  }
+  attr('recherche').addEventListener('input', filtrerAttrib);
+  attr('recherche').addEventListener('keydown', (ev) => {
+    const items = [...attr('liste').querySelectorAll('li[role=option]')];
+    if (!items.length) { if (ev.key === 'Enter') ev.preventDefault(); return; }
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault(); items[actifAttr] && items[actifAttr].classList.remove('actif');
+      actifAttr = (actifAttr + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[actifAttr].classList.add('actif'); items[actifAttr].scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter') { ev.preventDefault(); if (items[actifAttr]) choisirCafeAttrib(items[actifAttr]._cafe); }
+  });
+  attr('autre').addEventListener('click', () => {
+    const a = etat.attrib;
+    if (!a || a.enCours) return;
+    a.cafe = null; afficherCafeAttrib(); attr('recherche').value = ''; filtrerAttrib(); attr('recherche').focus();
+  });
+  attr('encaisser').addEventListener('change', () => message('msg-attribuer', '', ''));
+  attr('fermer').addEventListener('click', () => fermerAttribution());
+  $('voile-attribuer').addEventListener('click', (ev) => { if (ev.target === $('voile-attribuer')) fermerAttribution(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && etat.attrib) fermerAttribution(); });
+  $('form-attribuer').addEventListener('submit', (ev) => { ev.preventDefault(); validerAttribution(); });
+
+  function occupeAttribution(oui, texte) {
+    occupe(attr('valider'), oui, texte);
+    ['fermer', 'autre', 'encaisser'].forEach((k) => { attr(k).disabled = oui; });
+  }
+  async function validerAttribution() {
+    const a = etat.attrib;
+    if (!a || a.enCours) return;                       // double clic : un seul envoi
+    if (!a.cafe) { message('msg-attribuer', 'erreur', 'Choisissez un café dans la liste.'); return; }
+    const liv = a.liv, cafe = a.cafe, ticket = liv.ticket;
+    const encaisser = attr('encaisser').checked === true;
+    const cle = [ticket, cafe.licence, cafe.nom, encaisser].join('|');
+    let envoi = etat.completions.get(ticket);
+    if (!envoi || envoi.cle !== cle) { envoi = { id: nouvelId(), cle: cle }; etat.completions.set(ticket, envoi); }
+    const corps = { action: 'completer', id: envoi.id, ticket: ticket, licence: cafe.licence, nom: cafe.nom, encaisser: encaisser };
+
+    a.enCours = true;
+    occupeAttribution(true, 'Envoi en cours…');
+    message('msg-attribuer', '', '');
+    const t0 = performance.now();
+    let r = await appeler(corps, DELAI_ENVOI_MS);
+    // Réponse perdue ou trop lente : vérification avant d'afficher une erreur (voir verifierCompletion).
+    if (!r.ok && ERREURS_RESEAU[r.erreur]) {
+      occupeAttribution(true, 'Vérification…');
+      r = await verifierCompletion(corps, r);
+    }
+    a.enCours = false;
+    occupeAttribution(false, 'Valider');
+    afficherCafeAttrib();
+    console.info('[PWA] attribution ' + envoi.id + ' : ' + JSON.stringify(r) + ' en ' + Math.round(performance.now() - t0) + ' ms');
+
+    if (r.ok) {
+      etat.completions.delete(ticket);
+      etat.incompTraitees.add(ticket);
+      fermerAttribution(true);
+      afficherIncompletes();
+      toast('✓ Livraison attribuée : ' + cafe.nom + (encaisser && montantConnu(liv) ? ' · à encaisser ' + eur(liv.montant) : ''));
+      chargerIncompletes(false, true); chargerEnCours(false, true);
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
+      deconnecterPour(r.erreur);
+    } else if (r.inconnu) {
+      message('msg-attribuer', 'erreur', 'Impossible de vérifier si l’attribution est arrivée (' + (MESSAGES[r.erreur] || r.erreur).replace(/\.$/, '') +
+              '). Rien ne sera envoyé en double.', 'Réessayer', validerAttribution);
+    } else if (r.erreur === 'deja_completee' || r.erreur === 'deja_annulee' || r.erreur === 'intervention_introuvable') {
+      etat.completions.delete(ticket);
+      etat.incompTraitees.add(ticket);
+      fermerAttribution(true);
+      afficherIncompletes();
+      message('msg-cafes', 'info', r.erreur === 'deja_annulee' ? 'Cette livraison a été annulée entre-temps. La liste a été actualisée.' : MESSAGES[r.erreur]);
+      chargerIncompletes(false, true); chargerEnCours(false, true);
+    } else {
+      // cafe_inconnu, montant_inconnu, colonne_manquante, erreur_serveur… : la fenêtre reste ouverte, la saisie est conservée.
+      message('msg-attribuer', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+    }
+  }
+  // Le relais ne propose « statut » que pour « envoyer » : pour « completer » l'équivalent est de REJOUER le même appel avec le MÊME
+  // identifiant. Si le 1er appel avait abouti, le relais renvoie son résultat (doublon) sans rien écrire de plus ; sinon il l'exécute
+  // une seule fois. { ok } si enregistré, la réponse précise du relais si elle est définitive, { inconnu } si le serveur reste injoignable.
+  async function verifierCompletion(corps, premiereErreur) {
+    let derniere = premiereErreur;
+    for (let essai = 0; essai < 6; essai++) {
+      const s = await appeler(corps, 8000);
+      if (s.ok || !ERREURS_RESEAU[s.erreur]) return s;
+      derniere = s;
+      await pause(2000);   // réseau absent ou serveur occupé : on réessaie dans 2 s
+    }
+    return { ok: false, inconnu: true, erreur: derniere && derniere.erreur ? derniere.erreur : 'delai' };
   }
 
   /* ---------- Démarrage ---------- */
