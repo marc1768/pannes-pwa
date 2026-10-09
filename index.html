@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v10 – Service technique</title>
+<title>Pannes v11 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -138,6 +138,10 @@
   .maj { color: var(--doux); font-size: .85rem; margin: 0 0 14px; }
   .maj.alerte { color: #f59e0b; }
   .groupe { color: var(--doux); font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
+  /* v11 : un en-tête par type (couleur du type) avec ses compteurs */
+  .groupe-type { color: var(--texte); font-size: .9rem; border-left: 4px solid var(--c); padding-left: 9px; margin: 22px 0 10px; line-height: 1.35; }
+  .groupe-type:first-child { margin-top: 6px; }
+  .groupe-type .compte { color: var(--doux); font-weight: 650; text-transform: none; letter-spacing: 0; }
   .inter {
     display: flex; gap: 12px; align-items: flex-start;
     background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--c);
@@ -178,9 +182,13 @@
   .vide-encours { color: var(--doux); padding: 10px 0; }
 
   /* À compléter : livraisons Horeca issues d'une vente comptoir */
-  #zone-completer { margin: 0 0 26px; }
+  /* v11 : sous les 4 boutons, encadré sarcelle bien visible, compteur en pastille */
+  #zone-completer { margin: 22px 0 0; padding: 14px 14px 4px; border: 2px solid var(--horeca); border-radius: 16px;
+                    background: rgba(20, 184, 166, .08); }
   .titre-completer { display: flex; align-items: center; gap: 10px; }
-  .titre-completer h2 { margin: 0; flex: 1; }
+  .titre-completer h2 { margin: 0; flex: 1; display: flex; align-items: center; gap: 10px; }
+  .titre-completer .compteur { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;
+                               padding: 0 9px; border-radius: 16px; background: var(--horeca); color: #04201c; font-size: 1.05rem; font-weight: 800; }
   #zone-completer .aide { margin: 4px 0 14px; }
   .liv {
     background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--horeca); border-radius: 14px;
@@ -220,7 +228,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v10</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v11</small></h1>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
 </header>
 
@@ -241,14 +249,6 @@
   <!-- Écran 2 : encodage + interventions en cours -->
   <section id="ecran-encodage" class="cache">
     <div id="choix-type">
-      <!-- À compléter : visible seulement quand il y a au moins une livraison Horeca à attribuer -->
-      <section id="zone-completer" class="cache" aria-live="polite">
-        <div class="titre-completer"><h2 id="titre-completer">À compléter (0)</h2></div>
-        <p class="aide">Ventes comptoir avec livraison : attribuez un café pour les transmettre aux techniciens.</p>
-        <div id="msg-completer"></div>
-        <div id="liste-completer"></div>
-      </section>
-
       <h2>Nouvelle intervention</h2>
       <p class="aide">Choisissez le type d'intervention.</p>
       <div class="types">
@@ -259,6 +259,14 @@
       </div>
       <div id="msg-cafes"></div>
       <div id="etat-cafes"></div>
+
+      <!-- À compléter (v11 : SOUS les 4 boutons) : visible seulement quand il y a au moins une livraison Horeca à attribuer -->
+      <section id="zone-completer" class="cache" aria-live="polite">
+        <div class="titre-completer"><h2 id="titre-completer" aria-label="À compléter : 0">À compléter <span id="compteur-completer" class="compteur">0</span></h2></div>
+        <p class="aide">Ventes comptoir avec livraison : attribuez un café pour les transmettre aux techniciens.</p>
+        <div id="msg-completer"></div>
+        <div id="liste-completer"></div>
+      </section>
     </div>
 
     <form id="form-envoi" class="boite cache" autocomplete="off">
@@ -939,35 +947,69 @@
     majTexte();
     if (!etat.encours) return;   // pas encore de liste : on ne touche pas à la zone
     zone.innerHTML = '';
-    const visibles = etat.encours.filter((i) => !etat.masquees.has(cleInter(i)));
-    const enCours = visibles.filter((i) => i.statut === 'En cours')
-      .sort((a, b) => nomTechnicien(a.technicien).localeCompare(nomTechnicien(b.technicien), 'fr') || (a.debut || a.horodateur).localeCompare(b.debut || b.horodateur));
-    const enAttente = visibles.filter((i) => i.statut === 'En attente')
-      .sort((a, b) => a.horodateur.localeCompare(b.horodateur));
-    if (!enCours.length && !enAttente.length) {
+    const visibles = etat.encours.filter((i) => !etat.masquees.has(cleInter(i)) && (i.statut === 'En cours' || i.statut === 'En attente'));
+    if (!visibles.length) {
       const p = document.createElement('p'); p.className = 'vide-encours'; p.textContent = 'Aucune intervention en attente ou en cours.'; zone.appendChild(p); return;
     }
-    let groupe = null;
-    enCours.forEach((i) => {
-      const tech = nomTechnicien(i.technicien) || 'Technicien non indiqué';
-      if (tech !== groupe) { groupe = tech; titreGroupe(zone, 'En cours · ' + tech); }
-      zone.appendChild(carte(i, tech, 'En cours depuis ' + depuis(i.debut || i.horodateur)));
+    // v11 : regroupement par type (ORDRE_TYPES), puis « En attente » (la plus ancienne en haut), puis « En cours »
+    // (la plus anciennement prise en charge en haut). Un type sans ligne n'a pas d'en-tête.
+    ordonnerEnCours(visibles).forEach((g) => {
+      titreType(zone, g.type, g.attente.length, g.cours.length);
+      g.attente.forEach((i) => zone.appendChild(carte(i, 'Non prise', 'En attente depuis ' + depuis(i.horodateur))));
+      g.cours.forEach((i) => {
+        const tech = nomTechnicien(i.technicien) || 'Technicien non indiqué';
+        zone.appendChild(carte(i, tech, 'En cours depuis ' + depuis(i.debut || i.horodateur)));
+      });
     });
-    if (enAttente.length) titreGroupe(zone, 'En attente');
-    enAttente.forEach((i) => zone.appendChild(carte(i, 'Non prise', 'En attente depuis ' + depuis(i.horodateur))));
   }
-  function titreGroupe(zone, texte) { const h = document.createElement('div'); h.className = 'groupe'; h.textContent = texte; zone.appendChild(h); }
+  // Ordre des types dans la liste (demande de Marc, 09/10/2026). Tout type absent de cette liste compte comme PANNE.
+  const ORDRE_TYPES = ['PANNE', 'ENTRETIEN', 'LIVRAISON', 'LIVRAISON HORECA', 'MACHINE A CAFE'];
+  const TITRES_TYPES = { 'PANNE': 'Pannes', 'ENTRETIEN': 'Entretiens', 'LIVRAISON': 'Livraisons',
+                         'LIVRAISON HORECA': 'Livraisons Horeca', 'MACHINE A CAFE': 'Machines à café' };
+  // Type d'une ligne : « Appareils café » par ÉGALITÉ STRICTE (majuscules, sans accents, espaces en trop retirés), comme l'écran,
+  // AVANT le champ « type » du serveur (le script Google de secours le calcule avec « contient » et classerait
+  // « LIVRAISON HORECA » en « LIVRAISON »). Machine(s) ou valeur inconnue : PANNE.
+  const normType = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  function typeLigne(i) {
+    const app = normType(i.appareil);
+    if (ORDRE_TYPES.includes(app)) return app;
+    const t = normType(i.type);
+    return !app && ORDRE_TYPES.includes(t) ? t : 'PANNE';
+  }
+  const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  // [{ type, attente: [...], cours: [...] }] dans l'ordre des types, sans les types vides.
+  // Même heure : ordre de la feuille (numéro de ligne), pour un affichage stable.
+  function ordonnerEnCours(liste) {
+    return ORDRE_TYPES.map((type) => {
+      const du = liste.filter((i) => typeLigne(i) === type);
+      return {
+        type,
+        attente: du.filter((i) => i.statut === 'En attente')
+          .sort((a, b) => cmp(a.horodateur || '', b.horodateur || '') || (a.ligne || 0) - (b.ligne || 0)),
+        cours: du.filter((i) => i.statut === 'En cours')
+          .sort((a, b) => cmp(a.debut || a.horodateur || '', b.debut || b.horodateur || '') || (a.ligne || 0) - (b.ligne || 0))
+      };
+    }).filter((g) => g.attente.length + g.cours.length > 0);
+  }
+  function titreType(zone, type, nAttente, nCours) {
+    const h = document.createElement('div'); h.className = 'groupe groupe-type'; h.dataset.type = type;
+    h.appendChild(document.createTextNode(TITRES_TYPES[type].toUpperCase()));
+    const c = document.createElement('span'); c.className = 'compte';
+    c.textContent = ' · ' + nAttente + ' en attente · ' + nCours + ' en cours';
+    h.appendChild(c); zone.appendChild(h);
+  }
   const cleInter = (i) => i.ligne + '|' + i.horodateur;
   const nomMachine = (m) => m.toUpperCase() === 'INDETERMINE' ? 'Machine à déterminer' : m;
   function carte(i, qui, quand) {
     const d = document.createElement('div');
-    d.className = 'inter'; d.dataset.type = i.type;
-    const b = document.createElement('div'); b.className = 'badge'; b.textContent = (LIBELLES[i.type] || i.type).toUpperCase();
+    const type = typeLigne(i);   // v11 : même règle de type que le tri
+    d.className = 'inter'; d.dataset.type = type;
+    const b = document.createElement('div'); b.className = 'badge'; b.textContent = LIBELLES[type].toUpperCase();
     const contenu = document.createElement('div'); contenu.className = 'contenu';
     const c = document.createElement('div'); c.className = 'cafe'; c.textContent = i.cafe + ' ';
     const v = document.createElement('span'); v.textContent = '· ' + i.ville; c.appendChild(v);
     contenu.appendChild(c);
-    if (i.type === 'PANNE') {
+    if (type === 'PANNE') {
       const m = document.createElement('div'); m.className = 'machines';
       const liste = String(i.appareil || '').split(/\s*,\s*/).filter(Boolean).map(nomMachine);
       m.textContent = liste.length ? liste.join(' · ') : 'Machine à déterminer';
@@ -997,7 +1039,7 @@
     if (etat.annulations.has(cleInter(i))) return;
     aConfirmer = i;
     $('dlg-titre').textContent = 'Annuler cette intervention ?';
-    $('dlg-texte').textContent = i.cafe + ' – ' + (LIBELLES[i.type] || i.type);
+    $('dlg-texte').textContent = i.cafe + ' – ' + LIBELLES[typeLigne(i)];
     $('voile-annuler').classList.remove('cache');
     setTimeout(() => $('dlg-non').focus(), 30);
   }
@@ -1036,7 +1078,7 @@
     if (r.ok || r.erreur === 'deja_annulee') {
       etat.masquees.add(cle);
       afficherEnCours();
-      const texte = r.ok ? 'Intervention annulée : ' + i.cafe + ' – ' + (LIBELLES[i.type] || i.type) + '.' : MESSAGES.deja_annulee;
+      const texte = r.ok ? 'Intervention annulée : ' + i.cafe + ' – ' + LIBELLES[typeLigne(i)] + '.' : MESSAGES.deja_annulee;
       message('msg-encours', 'ok', texte);
       toast('✓ ' + texte);
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
@@ -1114,7 +1156,8 @@
     const liste = $('liste-completer');
     liste.innerHTML = '';
     $('zone-completer').classList.toggle('cache', !AVEC_INCOMPLETES || !visibles.length);
-    $('titre-completer').textContent = 'À compléter (' + visibles.length + ')';
+    $('compteur-completer').textContent = String(visibles.length);
+    $('titre-completer').setAttribute('aria-label', 'À compléter : ' + visibles.length);
     visibles.forEach((l) => liste.appendChild(carteLivraison(l)));
   }
   function carteLivraison(l) {
