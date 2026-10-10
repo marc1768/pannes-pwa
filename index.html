@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v11 – Service technique</title>
+<title>Pannes v12 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -216,6 +216,18 @@
   .dialogue .valider { background: var(--horeca); color: #04201c; border-color: var(--horeca) !important; }
   .dialogue .valider:disabled, .dialogue .non:disabled { opacity: .5; cursor: not-allowed; }
 
+  /* v12 : alertes (notifications Web Push) de CET appareil, en bas de page (les 4 boutons restent en haut) */
+  #zone-alertes { margin: 28px 0 0; padding: 14px; border: 1px solid var(--bord); border-radius: 16px; background: var(--carte); }
+  #zone-alertes h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  #zone-alertes .aide { margin: 0 0 10px; }
+  #alertes-etat { font-weight: 650; margin: 0 0 10px; }
+  #alertes-etat.actif { color: var(--ok-texte); }
+  .alertes-boutons { display: flex; flex-wrap: wrap; gap: 10px; }
+  .alertes-boutons button { min-height: 46px; border-radius: 12px; font-weight: 750; cursor: pointer; padding: 0 14px;
+                            border: 1px solid var(--bord); background: var(--carte2); color: var(--texte); }
+  .alertes-boutons .principal { background: var(--horeca); border-color: var(--horeca); color: #04201c; flex: 1; }
+  .alertes-boutons button:disabled { opacity: .6; cursor: wait; }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
     background: #166534; color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: var(--ombre);
@@ -228,7 +240,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v11</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v12</small></h1>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
 </header>
 
@@ -310,6 +322,19 @@
       <p id="maj-encours" class="maj">Chargement…</p>
       <div id="msg-encours"></div>
       <div id="liste-encours"></div>
+    </section>
+
+    <!-- v12 : alertes sur cet appareil (Web Push). Caché tant que le relais n'a pas répondu « actif ». -->
+    <section id="zone-alertes" class="cache" aria-live="polite">
+      <h2>Alertes sur cet appareil</h2>
+      <p class="aide">Notification quand une vente comptoir attend son café, même PWA fermée.</p>
+      <p id="alertes-etat"></p>
+      <div class="alertes-boutons">
+        <button id="btn-alertes-activer" class="principal cache" type="button">Activer les alertes</button>
+        <button id="btn-alertes-tester" class="cache" type="button">Envoyer une alerte de test</button>
+        <button id="btn-alertes-couper" class="cache" type="button">Désactiver</button>
+      </div>
+      <div id="msg-alertes"></div>
     </section>
   </section>
 </main>
@@ -406,7 +431,13 @@
     delai: 'Le serveur ne répond pas.',
     deja_completee: 'Cette livraison a déjà été complétée. La liste a été actualisée.',
     montant_inconnu: 'Le montant de cette vente est inconnu : décochez « À encaisser » ou prévenez Marc.',
-    id_invalide: 'Identifiant d’envoi invalide. Rechargez la page et réessayez.'
+    id_invalide: 'Identifiant d’envoi invalide. Rechargez la page et réessayez.',
+    push_inactif: 'Les alertes sont désactivées sur le serveur.',
+    abonnement_invalide: 'Cet appareil a refusé l’abonnement. Réessayez.',
+    trop_abonnements: 'Trop d’appareils abonnés (10 maximum). Désactivez un ancien appareil.',
+    appareil_inconnu: 'Cet appareil n’est plus abonné : réactivez les alertes.',
+    abonnement_expire: 'L’abonnement de cet appareil a expiré : réactivez les alertes.',
+    service_push: 'Le service de notification de l’appareil n’a pas accepté l’alerte. Réessayez plus tard.'
   };
 
   const $ = (id) => document.getElementById(id);
@@ -573,6 +604,7 @@
     etat.suiviActif = false;
     arreterRafraichissement();
     reinitIncompletes();
+    $('zone-alertes').classList.add('cache');
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
     $('ecran-connexion').classList.remove('cache');
@@ -592,6 +624,9 @@
     // refusé ne compte ainsi qu'un seul échec. Après une connexion (pas de source), le mot de passe vient d'être vérifié.
     if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerIncompletes(false, true); });
     else chargerIncompletes(false, true);
+    // v12 : état des alertes de cet appareil, après la vérification du mot de passe (comme « À compléter »).
+    if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerAlertes(); });
+    else chargerAlertes();
     demarrerRafraichissement();
   }
 
@@ -683,6 +718,7 @@
   });
 
   $('btn-deconnexion').addEventListener('click', () => {
+    alertesDeconnexion();          // v12 : un appareil déconnecté ne reçoit plus d'alertes
     oublierMdp(); etat.motdepasse = ''; etat.cafes = []; etat.encours = null;
     $('liste-encours').innerHTML = ''; $('etat-cafes').innerHTML = '';
     afficherConnexion();
@@ -1372,6 +1408,142 @@
       await pause(2000);   // réseau absent ou serveur occupé : on réessaie dans 2 s
     }
     return { ok: false, inconnu: true, erreur: derniere && derniere.erreur ? derniere.erreur : 'delai' };
+  }
+
+  /* ---------- v12 : alertes Web Push de CET appareil ----------
+   * Le relais garde un abonnement par appareil (actions push_cle, push_etat, push_abonner, push_desabonner, push_test,
+   * toutes protégées par le mot de passe). L'autorisation est demandée UNIQUEMENT au clic sur « Activer les alertes »
+   * (obligatoire sur iPhone). Le service worker (sw.js) affiche la notification et ouvre la PWA au clic. */
+  const alertes = { cle: '', endpoint: '' };
+  const pushPossible = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const estIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installee = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  function nomAppareil() {
+    const ua = navigator.userAgent;
+    const sys = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) || estIos() ? 'iPad' : /Android/.test(ua) ? 'Android'
+              : /Windows/.test(ua) ? 'PC Windows' : /Mac/.test(ua) ? 'Mac' : 'Appareil';
+    const nav = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+    return (sys + (nav ? ' · ' + nav : '')).slice(0, 60);
+  }
+  function octetsDepuisB64(b64) {
+    const s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4));
+    return Uint8Array.from(s, (c) => c.charCodeAt(0));
+  }
+  function memeCle(abonnement, b64) {
+    const k = abonnement && abonnement.options && abonnement.options.applicationServerKey;
+    if (!k) return true;                         // navigateur qui ne la donne pas : on laisse le relais trancher
+    const a = new Uint8Array(k), b = octetsDepuisB64(b64);
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  function afficherAlertes(mode, texte) {
+    // mode : 'cache' | 'info' (texte seul) | 'activer' | 'reactiver' | 'actif' | 'bloque'
+    $('zone-alertes').classList.toggle('cache', mode === 'cache');
+    const e = $('alertes-etat');
+    e.textContent = texte || ''; e.className = mode === 'actif' ? 'actif' : '';
+    $('btn-alertes-activer').classList.toggle('cache', !(mode === 'activer' || mode === 'reactiver'));
+    $('btn-alertes-activer').textContent = mode === 'reactiver' ? 'Réactiver les alertes' : 'Activer les alertes';
+    $('btn-alertes-tester').classList.toggle('cache', mode !== 'actif');
+    $('btn-alertes-couper').classList.toggle('cache', mode !== 'actif');
+  }
+  async function abonnementLocal() {
+    try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; }
+    catch (e) { return null; }
+  }
+  async function chargerAlertes() {
+    if (!AVEC_INCOMPLETES || !etat.motdepasse) return afficherAlertes('cache');      // script Google de secours : pas d'alertes
+    const mdp = etat.motdepasse;
+    const r = await lire({ action: 'push_cle' }, true);
+    if (etat.motdepasse !== mdp) return;
+    if (!r.ok || !r.actif || !r.cle) { alertes.cle = ''; return afficherAlertes('cache'); }   // relais sans alertes : rien à montrer
+    alertes.cle = r.cle;
+    if (!pushPossible()) {
+      return afficherAlertes('info', estIos() && !installee()
+        ? 'Sur iPhone : ajoutez d’abord la PWA à l’écran d’accueil (Partager → « Sur l’écran d’accueil »), puis ouvrez-la depuis son icône.'
+        : 'Ce navigateur ne permet pas les alertes.');
+    }
+    if (Notification.permission === 'denied') {
+      return afficherAlertes('bloque', 'Notifications bloquées pour ce site : autorisez-les dans les réglages de l’appareil ou du navigateur.');
+    }
+    const abo = await abonnementLocal();
+    alertes.endpoint = abo ? abo.endpoint : '';
+    if (!abo || Notification.permission !== 'granted') return afficherAlertes('activer', 'Alertes non activées sur cet appareil.');
+    const e = await lire({ action: 'push_etat', endpoint: abo.endpoint }, true);
+    if (etat.motdepasse !== mdp) return;
+    if (e.ok && e.connu && memeCle(abo, alertes.cle)) return afficherAlertes('actif', 'Alertes activées sur cet appareil.');
+    afficherAlertes('reactiver', 'Les alertes de cet appareil sont à réactiver.');
+  }
+  async function activerAlertes() {
+    const btn = $('btn-alertes-activer');
+    if (btn.disabled || !alertes.cle) return;
+    message('msg-alertes', '', '');
+    let permission = Notification.permission;
+    // Appel DIRECT dans le clic (iPhone : l'autorisation doit venir d'un geste de l'utilisateur).
+    if (permission !== 'granted') {
+      try { permission = await Notification.requestPermission(); } catch (e) { permission = 'denied'; }
+    }
+    if (permission !== 'granted') {
+      if (permission === 'denied') afficherAlertes('bloque', 'Notifications refusées : autorisez-les dans les réglages de l’appareil ou du navigateur.');
+      return;
+    }
+    const texte = btn.textContent;
+    occupe(btn, true, 'Activation…');
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let abo = await reg.pushManager.getSubscription();
+      if (abo && !memeCle(abo, alertes.cle)) { await abo.unsubscribe(); abo = null; }    // ancienne clé du serveur
+      if (!abo) abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: octetsDepuisB64(alertes.cle) });
+      const r = await appeler({ action: 'push_abonner', abonnement: abo.toJSON(), appareil: nomAppareil() }, DELAI_ENVOI_MS);
+      if (r.ok) { alertes.endpoint = abo.endpoint; afficherAlertes('actif', 'Alertes activées sur cet appareil.'); toast('Alertes activées'); }
+      else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') deconnecterPour(r.erreur);
+      else message('msg-alertes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+    } catch (e) {
+      message('msg-alertes', 'erreur', 'Activation impossible sur cet appareil (' + ((e && e.name) || 'erreur') + ').');
+    } finally {
+      occupe(btn, false, texte);
+    }
+  }
+  async function testerAlertes() {
+    const btn = $('btn-alertes-tester');
+    if (btn.disabled || !alertes.endpoint) return;
+    const texte = btn.textContent;
+    occupe(btn, true, 'Envoi…');
+    const r = await appeler({ action: 'push_test', endpoint: alertes.endpoint }, DELAI_ENVOI_MS);
+    occupe(btn, false, texte);
+    if (r.ok) message('msg-alertes', 'ok', 'Alerte de test envoyée : elle doit arriver dans quelques secondes.');
+    else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') deconnecterPour(r.erreur);
+    else {
+      message('msg-alertes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+      if (r.erreur === 'appareil_inconnu' || r.erreur === 'abonnement_expire') afficherAlertes('reactiver', 'Les alertes de cet appareil sont à réactiver.');
+    }
+  }
+  async function couperAlertes() {
+    const btn = $('btn-alertes-couper');
+    if (btn.disabled) return;
+    occupe(btn, true, 'Désactivation…');
+    const endpoint = alertes.endpoint;
+    const r = endpoint ? await appeler({ action: 'push_desabonner', endpoint }, DELAI_ENVOI_MS) : { ok: true };
+    const abo = await abonnementLocal();
+    if (abo) { try { await abo.unsubscribe(); } catch (e) {} }
+    occupe(btn, false, 'Désactiver');
+    if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') return deconnecterPour(r.erreur);
+    alertes.endpoint = '';
+    afficherAlertes('activer', 'Alertes non activées sur cet appareil.');
+    message('msg-alertes', r.ok ? 'ok' : 'erreur', r.ok ? 'Alertes désactivées sur cet appareil.' : (MESSAGES[r.erreur] || MESSAGES.erreur_serveur));
+  }
+  // Déconnexion : l'appareil quitte la liste du relais (appel parti AVANT l'effacement du mot de passe), puis se désabonne.
+  function alertesDeconnexion() {
+    if (alertes.endpoint && etat.motdepasse) appeler({ action: 'push_desabonner', endpoint: alertes.endpoint }, DELAI_ENVOI_MS);
+    alertes.endpoint = ''; alertes.cle = '';
+    abonnementLocal().then((abo) => { if (abo) abo.unsubscribe().catch(() => {}); });
+  }
+  $('btn-alertes-activer').addEventListener('click', activerAlertes);
+  $('btn-alertes-tester').addEventListener('click', testerAlertes);
+  $('btn-alertes-couper').addEventListener('click', couperAlertes);
+  // Une alerte arrive (ou un clic sur une alerte ramène la PWA au premier plan) : « À compléter » est relu tout de suite.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (ev) => {
+      if (ev.data && ev.data.type === 'alerte' && etat.motdepasse && etat.suiviActif) chargerIncompletes(true, true);
+    });
   }
 
   /* ---------- Démarrage ---------- */
