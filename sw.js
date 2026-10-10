@@ -3,6 +3,7 @@
 // Les appels au serveur (relais Cloudflare workers.dev, ou script Google) ne sont jamais interceptés :
 // autre domaine et méthode POST.
 //
+// v13 : version de cache relevée (titre v13, bloc « Rapports à imprimer » et fiche imprimable).
 // v12 : alertes Web Push de la direction : affichage de la notification (même PWA fermée) et ouverture de la PWA au clic.
 // v11 : version de cache relevée (titre v11, liste « en cours » triée par type, bloc « À compléter » sous les 4 boutons).
 // v10 : version de cache relevée (titre v10, bloc « À compléter » des livraisons Horeca issues d'une vente comptoir).
@@ -13,7 +14,7 @@
 // puis remis à jour en arrière-plan depuis GitHub (la nouvelle version est utilisée à l'ouverture
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
-const VERSION = 'pannes-v12';
+const VERSION = 'pannes-v13';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v12.1 – Service technique</title>
+<title>Pannes v13 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -237,6 +237,34 @@
   #msg-alertes { margin-top: 6px; }
   .alertes-boutons button:disabled { opacity: .6; cursor: wait; }
 
+  /* v13 : rapports machine à café à imprimer (sous « À compléter »), encadré violet comme le type Machine à café */
+  #zone-rapports { margin: 22px 0 0; padding: 14px 14px 4px; border: 2px solid var(--cafe); border-radius: 16px;
+                   background: rgba(168, 85, 247, .08); }
+  #zone-rapports .titre-completer .compteur { background: var(--cafe); color: #fff; }
+  #zone-rapports .aide { margin: 4px 0 14px; }
+  .rap { background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--cafe); border-radius: 14px;
+         padding: 12px 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .rap .cafe { font-weight: 750; overflow-wrap: anywhere; }
+  .rap .quand, .rap .qui { color: var(--doux); font-size: .88rem; }
+  .rap .sans-sig { color: #fbbf24; font-size: .88rem; font-weight: 650; }
+  .rap button { margin-top: 8px; min-height: 46px; border-radius: 12px; font-weight: 750; cursor: pointer;
+                border: 1px solid var(--cafe); background: var(--cafe); color: #fff; }
+  .rap button:disabled { opacity: .6; cursor: wait; }
+  /* Fiche : plein écran, barre d'actions + aperçu A4 (la fiche elle-même vient du relais, mise en page du modèle validé) */
+  #voile-fiche { position: fixed; inset: 0; z-index: 60; background: #0b1016; display: flex; flex-direction: column; }
+  #voile-fiche .barre-fiche { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px;
+                              padding-top: calc(10px + env(safe-area-inset-top)); background: var(--entete); border-bottom: 1px solid var(--bord); }
+  #voile-fiche .barre-fiche strong { flex: 1; min-width: 140px; overflow-wrap: anywhere; }
+  #voile-fiche .barre-fiche button { min-height: 42px; border-radius: 10px; font-weight: 750; cursor: pointer; padding: 0 14px;
+                                     border: 1px solid var(--bord); background: var(--carte2); color: var(--texte); }
+  #voile-fiche .barre-fiche .imprimer { background: var(--cafe); border-color: var(--cafe); color: #fff; }
+  #voile-fiche .barre-fiche .fait { background: var(--livraison); border-color: var(--livraison); color: #052e16; }
+  #voile-fiche .barre-fiche button:disabled { opacity: .6; cursor: wait; }
+  #fiche-avertissement { padding: 10px 14px; background: #3b2a06; color: #fde68a; font-weight: 650; font-size: .92rem; }
+  #fiche-msg .message { margin: 8px 12px; }
+  #fiche-cadre { flex: 1; width: 100%; border: 0; background: #e5e8ed; }
+  #voile-imprime { z-index: 70; }   /* au-dessus de la fiche */
+
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
     background: #166534; color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: var(--ombre);
@@ -249,7 +277,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v12.1</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v13</small></h1>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
   <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
@@ -298,6 +326,14 @@
         <p class="aide">Ventes comptoir avec livraison : attribuez un café pour les transmettre aux techniciens.</p>
         <div id="msg-completer"></div>
         <div id="liste-completer"></div>
+      </section>
+
+      <!-- v13 : rapports machine à café clôturés, à imprimer (visible seulement s'il y en a) -->
+      <section id="zone-rapports" class="cache" aria-live="polite">
+        <div class="titre-completer"><h2 id="titre-rapports" aria-label="Rapports à imprimer : 0">Rapports à imprimer <span id="compteur-rapports" class="compteur">0</span></h2></div>
+        <p class="aide">Interventions machine à café clôturées : imprimez la fiche, puis marquez-la imprimée.</p>
+        <div id="msg-rapports"></div>
+        <div id="liste-rapports"></div>
       </section>
     </div>
 
@@ -348,6 +384,30 @@
 </main>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- v13 : fiche imprimable d'un rapport -->
+<div id="voile-fiche" class="cache" role="dialog" aria-modal="true" aria-labelledby="fiche-titre">
+  <div class="barre-fiche">
+    <strong id="fiche-titre">Rapport machine à café</strong>
+    <button id="fiche-fermer" type="button">Fermer</button>
+    <button id="fiche-imprimer" class="imprimer" type="button">Imprimer</button>
+    <button id="fiche-fait" class="fait" type="button">Marquer imprimé</button>
+  </div>
+  <div id="fiche-avertissement" class="cache"></div>
+  <div id="fiche-msg"></div>
+  <iframe id="fiche-cadre" title="Fiche imprimable"></iframe>
+</div>
+
+<div id="voile-imprime" class="voile cache">
+  <div class="dialogue" role="alertdialog" aria-modal="true" aria-labelledby="imp-titre" aria-describedby="imp-texte">
+    <h3 id="imp-titre">Marquer ce rapport comme imprimé ?</h3>
+    <p id="imp-texte"></p>
+    <div class="boutons">
+      <button id="imp-non" class="non" type="button">Non</button>
+      <button id="imp-oui" class="oui" type="button">Oui, imprimé</button>
+    </div>
+  </div>
+</div>
 
 <div id="voile-annuler" class="voile cache">
   <div class="dialogue" role="alertdialog" aria-modal="true" aria-labelledby="dlg-titre" aria-describedby="dlg-texte">
@@ -445,7 +505,12 @@
     trop_abonnements: 'Trop d’appareils abonnés (10 maximum). Désactivez un ancien appareil.',
     appareil_inconnu: 'Cet appareil n’est plus abonné : réactivez les alertes.',
     abonnement_expire: 'L’abonnement de cet appareil a expiré : réactivez les alertes.',
-    service_push: 'Le service de notification de l’appareil n’a pas accepté l’alerte. Réessayez plus tard.'
+    service_push: 'Le service de notification de l’appareil n’a pas accepté l’alerte. Réessayez plus tard.',
+    pas_un_rapport: 'Cette intervention n’est plus un rapport machine à café clôturé. La liste a été actualisée.',
+    deja_imprime: 'Ce rapport était déjà marqué imprimé. La liste a été actualisée.',
+    colonne_archive_manquante: 'Impossible de marquer imprimé : la colonne « PiecesImprimees » manque dans la feuille. Rien n’a été modifié. Prévenez Marc.',
+    archive_non_ecrite: 'Les pièces n’ont pas pu être archivées dans la feuille : rien n’a été effacé, le rapport reste dans la liste. Réessayez.',
+    onglet_pieces_absent: 'L’onglet « Pièces remplacées » est introuvable : rien n’a été modifié. Prévenez Marc.'
   };
 
   const $ = (id) => document.getElementById(id);
@@ -612,6 +677,7 @@
     etat.suiviActif = false;
     arreterRafraichissement();
     reinitIncompletes();
+    reinitRapports();
     $('btn-cloche').classList.add('cache'); $('zone-alertes').classList.remove('ouvert');
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
@@ -632,6 +698,9 @@
     // refusé ne compte ainsi qu'un seul échec. Après une connexion (pas de source), le mot de passe vient d'être vérifié.
     if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerIncompletes(false, true); });
     else chargerIncompletes(false, true);
+    // v13 : rapports à imprimer, après la vérification du mot de passe (comme « À compléter »).
+    if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerRapports(false, true); });
+    else chargerRapports(false, true);
     // v12 : état des alertes de cet appareil, après la vérification du mot de passe (comme « À compléter »).
     if (sourceEncours) sourceEncours.then((r) => { if (!(r && (r.erreur === 'mot_de_passe' || r.erreur === 'bloque'))) chargerAlertes(); });
     else chargerAlertes();
@@ -903,7 +972,8 @@
   function demarrerRafraichissement() {
     arreterRafraichissement();
     if (document.visibilityState !== 'visible') return;   // en pause : reprise à l'ouverture
-    minuteurEncours = setInterval(() => { chargerEnCours(); chargerIncompletes(); }, RAFRAICHIR_MS);
+    let tour = 0;   // v13 : rapports relus toutes les 3 minutes (lecture plus lourde), au lieu de chaque minute
+    minuteurEncours = setInterval(() => { chargerEnCours(); chargerIncompletes(); if (++tour % 3 === 0) chargerRapports(); }, RAFRAICHIR_MS);
     // Sans réseau : met à jour « il y a N min » et les durées « depuis » des cartes.
     minuteurAffichage = setInterval(() => afficherEnCours(), 30000);
   }
@@ -915,11 +985,11 @@
     if (!etat.suiviActif) return;
     if (document.visibilityState === 'visible') {
       if (!etat.cafes.length) rafraichirCafes(false, true);   // toujours pas de liste : nouvel essai à la reprise
-      afficherEnCours(); chargerEnCours(false, true); chargerIncompletes(false, true); demarrerRafraichissement();
+      afficherEnCours(); chargerEnCours(false, true); chargerIncompletes(false, true); chargerRapports(false, true); demarrerRafraichissement();
     }
     else arreterRafraichissement();
   });
-  $('btn-actualiser').addEventListener('click', () => { chargerEnCours(true); chargerIncompletes(true); });
+  $('btn-actualiser').addEventListener('click', () => { chargerEnCours(true); chargerIncompletes(true); chargerRapports(true); });
 
   let lectureEncours = null;          // lecture « encours » en cours (on s'y rattache au lieu d'en lancer une 2e)
   let erreurActualiser = false;       // message d'erreur du bouton « Actualiser » affiché
@@ -1165,6 +1235,119 @@
     $('liste-encours').innerHTML = ''; $('etat-cafes').innerHTML = '';
     afficherConnexion(erreur);
   }
+  /* ---------- v13 : rapports machine à café à imprimer ---------- */
+  const rapports = { liste: null, imprimes: new Set(), lecture: null, ouvert: null, idImpression: null };
+  function reinitRapports() {
+    rapports.liste = null; rapports.imprimes.clear(); rapports.ouvert = null; rapports.idImpression = null;
+    fermerFiche();
+    $('zone-rapports').classList.add('cache'); $('liste-rapports').innerHTML = ''; message('msg-rapports', '', '');
+  }
+  async function chargerRapports(manuel, direct) {
+    if (!AVEC_INCOMPLETES || !etat.motdepasse) return;
+    const mdp = etat.motdepasse;
+    if (!rapports.lecture) rapports.lecture = lire({ action: 'rapports' }, manuel || direct).finally(() => { rapports.lecture = null; });
+    const r = await rapports.lecture;
+    if (etat.motdepasse !== mdp) return;
+    if (r.ok && Array.isArray(r.rapports)) {
+      rapports.liste = r.rapports;
+      const presents = new Set(r.rapports.map((x) => x.horodateur));
+      rapports.imprimes.forEach((h) => { if (!presents.has(h)) rapports.imprimes.delete(h); });
+      message('msg-rapports', '', '');
+      afficherRapports();
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') deconnecterPour(r.erreur);
+    else if (r.erreur === 'action_inconnue') { rapports.liste = null; afficherRapports(); }      // relais sans l'étape 3
+    else if (r.erreur === 'colonne_manquante' && manuel) message('msg-rapports', 'erreur', MESSAGES.colonne_manquante);
+    // autre erreur : silencieuse, la liste affichée reste valable
+  }
+  function afficherRapports() {
+    const visibles = (rapports.liste || []).filter((x) => !rapports.imprimes.has(x.horodateur));
+    const liste = $('liste-rapports'); liste.innerHTML = '';
+    $('zone-rapports').classList.toggle('cache', !visibles.length);
+    $('compteur-rapports').textContent = String(visibles.length);
+    $('titre-rapports').setAttribute('aria-label', 'Rapports à imprimer : ' + visibles.length);
+    visibles.forEach((x) => liste.appendChild(carteRapport(x)));
+  }
+  function carteRapport(x) {
+    const d = document.createElement('div'); d.className = 'rap';
+    const c = document.createElement('div'); c.className = 'cafe'; c.textContent = x.cafe + (x.ville ? ' · ' + x.ville : ''); d.appendChild(c);
+    const q = document.createElement('div'); q.className = 'quand'; q.textContent = 'Clôturé le ' + dateHeure(x.fin || x.horodateur); d.appendChild(q);
+    if (x.technicien) { const t = document.createElement('div'); t.className = 'qui'; t.textContent = 'Technicien : ' + x.technicien; d.appendChild(t); }
+    if (!x.signature) { const s = document.createElement('div'); s.className = 'sans-sig'; s.textContent = 'Pas de signature enregistrée'; d.appendChild(s); }
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Voir la fiche';
+    b.setAttribute('aria-label', 'Voir la fiche du rapport ' + x.cafe);
+    b.addEventListener('click', () => ouvrirFiche(x, b));
+    d.appendChild(b);
+    return d;
+  }
+  async function ouvrirFiche(x, btn) {
+    if (btn.disabled) return;
+    occupe(btn, true, 'Préparation…');
+    const r = await lire({ action: 'rapport', horodateur: x.horodateur, ligne: x.ligne }, true);
+    occupe(btn, false, 'Voir la fiche');
+    if (!r.ok) {
+      if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') return deconnecterPour(r.erreur);
+      message('msg-rapports', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur, 'Réessayer', () => ouvrirFiche(x, btn));
+      if (r.erreur === 'intervention_introuvable' || r.erreur === 'pas_un_rapport') chargerRapports(true);
+      return;
+    }
+    rapports.ouvert = { horodateur: r.horodateur, ligne: r.ligne, cafe: r.cafe, signature: r.signature, message: r.message_signature };
+    rapports.idImpression = nouvelId();          // même identifiant si « Marquer imprimé » doit être renvoyé
+    $('fiche-titre').textContent = r.cafe || 'Rapport machine à café';
+    const av = $('fiche-avertissement');
+    av.textContent = r.message_signature ? 'Signature : ' + r.message_signature : '';
+    av.classList.toggle('cache', !r.message_signature);
+    message('fiche-msg', '', '');
+    $('fiche-fait').disabled = !!r.imprime;
+    $('fiche-cadre').srcdoc = r.html;
+    $('voile-fiche').classList.remove('cache');
+    document.body.style.overflow = 'hidden';
+  }
+  function fermerFiche() {
+    $('voile-fiche').classList.add('cache'); $('voile-imprime').classList.add('cache');
+    $('fiche-cadre').srcdoc = ''; rapports.ouvert = null;
+    document.body.style.overflow = '';
+  }
+  function imprimerFiche() {
+    const w = $('fiche-cadre').contentWindow;
+    if (!w) return;
+    try { w.focus(); w.print(); } catch (e) { message('fiche-msg', 'erreur', 'Impression impossible depuis cet appareil.'); }
+  }
+  function demanderImprime() {
+    if (!rapports.ouvert) return;
+    $('imp-texte').textContent = 'Le rapport « ' + (rapports.ouvert.cafe || '') + ' » quittera la liste. Ses pièces seront recopiées sur sa ligne ' +
+      '(colonne PiecesImprimees), puis effacées de l’onglet « Pièces remplacées » ; la fiche ne pourra plus être réimprimée depuis la PWA.' +
+      (rapports.ouvert.signature !== 'ok' ? ' ATTENTION : la signature n’apparaît pas sur cette fiche.' : '');
+    $('voile-imprime').classList.remove('cache');
+  }
+  async function confirmerImprime() {
+    const o = rapports.ouvert;
+    $('voile-imprime').classList.add('cache');
+    if (!o) return;
+    const btn = $('fiche-fait');
+    if (btn.disabled) return;
+    occupe(btn, true, 'Enregistrement…');
+    const r = await appeler({ action: 'rapport_imprime', horodateur: o.horodateur, ligne: o.ligne, id: rapports.idImpression }, DELAI_ENVOI_MS);
+    occupe(btn, false, 'Marquer imprimé');
+    if (r.ok || r.erreur === 'deja_imprime') {
+      rapports.imprimes.add(o.horodateur);
+      fermerFiche(); afficherRapports();
+      toast(r.ok ? 'Rapport marqué imprimé' : MESSAGES.deja_imprime);
+      chargerRapports(true);
+    } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') { fermerFiche(); deconnecterPour(r.erreur); }
+    else if (r.erreur === 'reseau' || r.erreur === 'delai') {
+      // Même identifiant : si le 1er envoi était arrivé, le relais renvoie le même résultat sans rien refaire.
+      message('fiche-msg', 'erreur', MESSAGES[r.erreur], 'Réessayer', confirmerImprime);
+    } else {
+      message('fiche-msg', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
+      if (r.erreur === 'intervention_introuvable' || r.erreur === 'pas_un_rapport') chargerRapports(true);
+    }
+  }
+  $('fiche-fermer').addEventListener('click', fermerFiche);
+  $('fiche-imprimer').addEventListener('click', imprimerFiche);
+  $('fiche-fait').addEventListener('click', demanderImprime);
+  $('imp-non').addEventListener('click', () => $('voile-imprime').classList.add('cache'));
+  $('imp-oui').addEventListener('click', confirmerImprime);
+
   function reinitIncompletes() {
     etat.incompletes = null; etat.sansIncompletes = false;
     etat.incompTraitees.clear(); etat.annulLiv.clear(); etat.completions.clear();
@@ -1552,7 +1735,7 @@
   // Une alerte arrive (ou un clic sur une alerte ramène la PWA au premier plan) : « À compléter » est relu tout de suite.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (ev) => {
-      if (ev.data && ev.data.type === 'alerte' && etat.motdepasse && etat.suiviActif) chargerIncompletes(true, true);
+      if (ev.data && ev.data.type === 'alerte' && etat.motdepasse && etat.suiviActif) { chargerIncompletes(true, true); chargerRapports(true, true); }
     });
   }
 
