@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v12 – Service technique</title>
+<title>Pannes v12.1 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -217,15 +217,24 @@
   .dialogue .valider:disabled, .dialogue .non:disabled { opacity: .5; cursor: not-allowed; }
 
   /* v12 : alertes (notifications Web Push) de CET appareil, en bas de page (les 4 boutons restent en haut) */
-  #zone-alertes { margin: 28px 0 0; padding: 14px; border: 1px solid var(--bord); border-radius: 16px; background: var(--carte); }
-  #zone-alertes h2 { font-size: 1.05rem; margin: 0 0 4px; }
-  #zone-alertes .aide { margin: 0 0 10px; }
-  #alertes-etat { font-weight: 650; margin: 0 0 10px; }
+  #btn-cloche { position: relative; flex: none; width: 38px; height: 38px; padding: 0; display: grid; place-items: center;
+                background: var(--carte2); border: 1px solid var(--bord); border-radius: 10px; color: var(--texte); cursor: pointer; }
+  #btn-cloche svg { width: 20px; height: 20px; }
+  #btn-cloche::after { content: ''; position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%;
+                       background: #f59e0b; border: 1.5px solid var(--entete); }
+  #btn-cloche[data-etat="actif"]::after { background: #22c55e; }
+  #btn-cloche[data-etat="info"]::after, #btn-cloche[data-etat="bloque"]::after { background: #ef4444; }
+  #zone-alertes { display: none; position: absolute; top: 100%; right: 12px; margin-top: 6px; z-index: 30;
+                  width: min(340px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid var(--bord); border-radius: 12px;
+                  background: var(--carte); box-shadow: var(--ombre); font-size: .85rem; color: var(--texte); }
+  #zone-alertes.ouvert { display: block; }
+  #alertes-etat { font-weight: 600; margin: 0 0 8px; }
   #alertes-etat.actif { color: var(--ok-texte); }
-  .alertes-boutons { display: flex; flex-wrap: wrap; gap: 10px; }
-  .alertes-boutons button { min-height: 46px; border-radius: 12px; font-weight: 750; cursor: pointer; padding: 0 14px;
+  .alertes-boutons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .alertes-boutons button { min-height: 32px; border-radius: 8px; font-weight: 650; font-size: .82rem; cursor: pointer; padding: 0 12px;
                             border: 1px solid var(--bord); background: var(--carte2); color: var(--texte); }
-  .alertes-boutons .principal { background: var(--horeca); border-color: var(--horeca); color: #04201c; flex: 1; }
+  .alertes-boutons .principal { background: var(--horeca); border-color: var(--horeca); color: #04201c; }
+  #msg-alertes { margin-top: 6px; }
   .alertes-boutons button:disabled { opacity: .6; cursor: wait; }
 
   .toast {
@@ -240,8 +249,19 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v12</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v12.1</small></h1>
+  <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
+  <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
+  <section id="zone-alertes" class="cache" aria-live="polite">
+    <p id="alertes-etat"></p>
+    <div class="alertes-boutons">
+      <button id="btn-alertes-activer" class="principal cache" type="button">Activer les alertes</button>
+      <button id="btn-alertes-tester" class="cache" type="button">Tester</button>
+      <button id="btn-alertes-couper" class="cache" type="button">Désactiver</button>
+    </div>
+    <div id="msg-alertes"></div>
+  </section>
 </header>
 
 <main>
@@ -324,18 +344,6 @@
       <div id="liste-encours"></div>
     </section>
 
-    <!-- v12 : alertes sur cet appareil (Web Push). Caché tant que le relais n'a pas répondu « actif ». -->
-    <section id="zone-alertes" class="cache" aria-live="polite">
-      <h2>Alertes sur cet appareil</h2>
-      <p class="aide">Notification quand une vente comptoir attend son café, même PWA fermée.</p>
-      <p id="alertes-etat"></p>
-      <div class="alertes-boutons">
-        <button id="btn-alertes-activer" class="principal cache" type="button">Activer les alertes</button>
-        <button id="btn-alertes-tester" class="cache" type="button">Envoyer une alerte de test</button>
-        <button id="btn-alertes-couper" class="cache" type="button">Désactiver</button>
-      </div>
-      <div id="msg-alertes"></div>
-    </section>
   </section>
 </main>
 
@@ -604,7 +612,7 @@
     etat.suiviActif = false;
     arreterRafraichissement();
     reinitIncompletes();
-    $('zone-alertes').classList.add('cache');
+    $('btn-cloche').classList.add('cache'); $('zone-alertes').classList.remove('ouvert');
     $('ecran-encodage').classList.add('cache');
     $('btn-deconnexion').classList.add('cache');
     $('ecran-connexion').classList.remove('cache');
@@ -1437,7 +1445,8 @@
   }
   function afficherAlertes(mode, texte) {
     // mode : 'cache' | 'info' (texte seul) | 'activer' | 'reactiver' | 'actif' | 'bloque'
-    $('zone-alertes').classList.toggle('cache', mode === 'cache');
+    $('btn-cloche').classList.toggle('cache', mode === 'cache'); $('btn-cloche').dataset.etat = mode;
+    if (mode === 'cache') $('zone-alertes').classList.remove('ouvert');
     const e = $('alertes-etat');
     e.textContent = texte || ''; e.className = mode === 'actif' ? 'actif' : '';
     $('btn-alertes-activer').classList.toggle('cache', !(mode === 'activer' || mode === 'reactiver'));
@@ -1466,10 +1475,10 @@
     }
     const abo = await abonnementLocal();
     alertes.endpoint = abo ? abo.endpoint : '';
-    if (!abo || Notification.permission !== 'granted') return afficherAlertes('activer', 'Alertes non activées sur cet appareil.');
+    if (!abo || Notification.permission !== 'granted') return afficherAlertes('activer', 'Alertes non activées sur cet appareil');
     const e = await lire({ action: 'push_etat', endpoint: abo.endpoint }, true);
     if (etat.motdepasse !== mdp) return;
-    if (e.ok && e.connu && memeCle(abo, alertes.cle)) return afficherAlertes('actif', 'Alertes activées sur cet appareil.');
+    if (e.ok && e.connu && memeCle(abo, alertes.cle)) return afficherAlertes('actif', 'Alertes activées sur cet appareil');
     afficherAlertes('reactiver', 'Les alertes de cet appareil sont à réactiver.');
   }
   async function activerAlertes() {
@@ -1493,7 +1502,7 @@
       if (abo && !memeCle(abo, alertes.cle)) { await abo.unsubscribe(); abo = null; }    // ancienne clé du serveur
       if (!abo) abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: octetsDepuisB64(alertes.cle) });
       const r = await appeler({ action: 'push_abonner', abonnement: abo.toJSON(), appareil: nomAppareil() }, DELAI_ENVOI_MS);
-      if (r.ok) { alertes.endpoint = abo.endpoint; afficherAlertes('actif', 'Alertes activées sur cet appareil.'); toast('Alertes activées'); }
+      if (r.ok) { alertes.endpoint = abo.endpoint; afficherAlertes('actif', 'Alertes activées sur cet appareil'); toast('Alertes activées'); }
       else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') deconnecterPour(r.erreur);
       else message('msg-alertes', 'erreur', MESSAGES[r.erreur] || MESSAGES.erreur_serveur);
     } catch (e) {
@@ -1527,7 +1536,7 @@
     occupe(btn, false, 'Désactiver');
     if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') return deconnecterPour(r.erreur);
     alertes.endpoint = '';
-    afficherAlertes('activer', 'Alertes non activées sur cet appareil.');
+    afficherAlertes('activer', 'Alertes non activées sur cet appareil');
     message('msg-alertes', r.ok ? 'ok' : 'erreur', r.ok ? 'Alertes désactivées sur cet appareil.' : (MESSAGES[r.erreur] || MESSAGES.erreur_serveur));
   }
   // Déconnexion : l'appareil quitte la liste du relais (appel parti AVANT l'effacement du mot de passe), puis se désabonne.
@@ -1536,6 +1545,7 @@
     alertes.endpoint = ''; alertes.cle = '';
     abonnementLocal().then((abo) => { if (abo) abo.unsubscribe().catch(() => {}); });
   }
+  $('btn-cloche').addEventListener('click', () => $('zone-alertes').classList.toggle('ouvert'));
   $('btn-alertes-activer').addEventListener('click', activerAlertes);
   $('btn-alertes-tester').addEventListener('click', testerAlertes);
   $('btn-alertes-couper').addEventListener('click', couperAlertes);
