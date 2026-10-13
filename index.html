@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v13 – Service technique</title>
+<title>Pannes v14 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -52,7 +52,7 @@
   #ecran-connexion { min-height: 70vh; display: grid; place-items: center; }
   #ecran-connexion .boite { width: 100%; max-width: 400px; }
   label.champ { display: block; font-weight: 650; margin-bottom: 6px; font-size: .95rem; }
-  input[type=password], input[type=search], input[type=text], textarea {
+  input[type=password], input[type=search], input[type=text], input[type=date], textarea {
     width: 100%; border: 1.5px solid var(--bord); border-radius: 12px; padding: 12px 14px; background: var(--fond); color: var(--texte);
     outline: none; transition: border-color .15s, box-shadow .15s;
   }
@@ -179,6 +179,18 @@
   .inter[data-type="LIVRAISON HORECA"] .nature { -webkit-line-clamp: 3; }
   .inter .qui { color: var(--texte); font-size: .92rem; }
   .inter .depuis { color: var(--doux); font-size: .88rem; }
+  /* v14 : date de livraison (saisie et affichage) */
+  input[type=date] { min-height: 48px; color-scheme: dark; }
+  input[type=date]:disabled { opacity: .45; }
+  .choix-date { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .choix-date input[type=date] { flex: 1 1 170px; width: auto; }
+  .case.case-date { margin: 0; min-height: 48px; color: var(--texte); }
+  .case.case-date input { width: 24px; height: 24px; }
+  .champ-date-attr { display: block; margin: 14px 0 6px; }
+  .inter .date-liv { margin-top: 3px; font-size: .9rem; white-space: nowrap; }
+  .inter .date-liv .etiq { color: var(--doux); font-weight: 500; }
+  .inter .date-liv .val { color: #ef4444; font-weight: 800; }
+  .inter .date-liv .val.retard { color: #fff; background: #c0392b; border-radius: 6px; padding: 1px 8px; }
   .vide-encours { color: var(--doux); padding: 10px 0; }
 
   /* À compléter : livraisons Horeca issues d'une vente comptoir */
@@ -277,7 +289,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v13</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v14</small></h1>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
   <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
@@ -315,7 +327,7 @@
         <button class="type" type="button" data-type="PANNE"><span class="ico" data-ico="PANNE"></span>PANNE</button>
         <button class="type" type="button" data-type="MACHINE A CAFE"><span class="ico" data-ico="MACHINE A CAFE"></span>MACHINE À CAFÉ</button>
         <button class="type" type="button" data-type="ENTRETIEN"><span class="ico" data-ico="ENTRETIEN"></span>ENTRETIEN</button>
-        <button class="type" type="button" data-type="LIVRAISON"><span class="ico" data-ico="LIVRAISON"></span>LIVRAISON</button>
+        <button class="type" type="button" data-type="LIVRAISON"><span class="ico" data-ico="LIVRAISON"></span>LIVRAISON MACHINE</button>
       </div>
       <div id="msg-cafes"></div>
       <div id="etat-cafes"></div>
@@ -337,7 +349,7 @@
       </section>
     </div>
 
-    <form id="form-envoi" class="boite cache" autocomplete="off">
+    <form id="form-envoi" class="boite cache" autocomplete="off" novalidate><!-- v14 : nos messages, pas la bulle du navigateur -->
       <div class="entete-form">
         <span id="pastille" class="pastille"></span>
         <button id="btn-changer" class="btn-changer" type="button">Changer de type</button>
@@ -359,6 +371,16 @@
         <label class="champ">Machine(s) concernée(s)</label>
         <p class="aide" style="margin-bottom:10px">INDETERMINE si vous ne savez pas encore. Plusieurs choix possibles.</p>
         <div id="puces-machines" class="puces"></div>
+      </div>
+
+      <!-- v14 : date de livraison, OBLIGATOIRE pour une livraison de jeux : une date OU « Indéterminé » -->
+      <div id="bloc-date" class="bloc cache">
+        <label class="champ" for="date-liv">Date de livraison</label>
+        <div class="choix-date">
+          <input id="date-liv" type="date">
+          <label class="case case-date"><input id="date-indet" type="checkbox"><span>Indéterminé</span></label>
+        </div>
+        <p class="aide">Obligatoire : une date (d'aujourd'hui à 60 jours) ou « Indéterminé ».</p>
       </div>
 
       <div class="bloc">
@@ -421,7 +443,7 @@
 </div>
 
 <div id="voile-attribuer" class="voile cache">
-  <form id="form-attribuer" class="dialogue large" role="dialog" aria-modal="true" aria-labelledby="attr-titre" autocomplete="off">
+  <form id="form-attribuer" class="dialogue large" role="dialog" aria-modal="true" aria-labelledby="attr-titre" autocomplete="off" novalidate>
     <h3 id="attr-titre">Attribuer un café</h3>
     <p id="attr-resume" class="resume-liv"></p>
     <div id="attr-zone-recherche">
@@ -432,6 +454,9 @@
       <div><strong id="attr-cafe-nom"></strong><span id="attr-cafe-ville"></span></div>
       <button id="attr-autre" type="button">Changer</button>
     </div>
+    <!-- v14 : date de livraison obligatoire (aujourd'hui par défaut ; jamais dans le passé ; au plus 60 jours) -->
+    <label class="champ champ-date-attr" for="attr-date">Date de livraison</label>
+    <input id="attr-date" type="date" required>
     <label class="case case-liv"><input id="attr-encaisser" type="checkbox"><span id="attr-encaisser-texte"></span></label>
     <div id="msg-attribuer"></div>
     <div class="boutons">
@@ -463,6 +488,45 @@
   // Le bloc « À compléter » (actions incompletes, completer, annuler_incomplet) n'existe que sur le relais :
   // le script Google de secours ne les connaît pas, le bloc reste alors caché.
   const AVEC_INCOMPLETES = CIBLE === DESTINATIONS.relais;
+  // v14 : la date de livraison n'est connue que du relais (le script Google de secours l'ignorerait) : champ caché sinon.
+  const AVEC_DATE_LIVRAISON = CIBLE === DESTINATIONS.relais;
+
+  /* ---------- v14 : date de livraison (jours « AAAA-MM-JJ », jour de BRUXELLES) ---------- */
+  const DATE_LIV_MAX_JOURS = 60;
+  function jourBruxelles(d) {
+    const p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(d || new Date()).forEach((x) => { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day;
+  }
+  const utcJour = (j) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(j || '')); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+  const ajouterJours = (j, n) => new Date(utcJour(j) + n * 86400000).toISOString().slice(0, 10);
+  const ecartJours = (j, ref) => Math.round((utcJour(j) - utcJour(ref)) / 86400000);
+  // Même contrôle que le relais : '' si correct, sinon le code d'erreur (le relais revérifie toujours).
+  function erreurDateLivraison(j) {
+    if (!j) return 'date_manquante';
+    if (!isFinite(utcJour(j)) || new Date(utcJour(j)).toISOString().slice(0, 10) !== j) return 'date_invalide';
+    const e = ecartJours(j, jourBruxelles());
+    return e < 0 ? 'date_passee' : e > DATE_LIV_MAX_JOURS ? 'date_trop_loin' : '';
+  }
+  // Affichage (mêmes textes que les écrans), toujours précédé de l'étiquette « Livraison : » :
+  // « aujourd'hui », « demain 14/10 », « 16/10 », « indéterminée » (case vide, jamais en retard), « EN RETARD · 12/10 » (date passée).
+  function libelleDateLivraison(j) {
+    if (!j) return { texte: 'indéterminée', classe: '' };
+    const e = ecartJours(j, jourBruxelles());
+    if (!isFinite(e)) return { texte: 'indéterminée', classe: '' };
+    const jjmm = j.slice(8, 10) + '/' + j.slice(5, 7);
+    if (e < 0) return { texte: 'EN RETARD · ' + jjmm, classe: 'retard' };
+    if (e === 0) return { texte: 'aujourd’hui', classe: '' };
+    if (e === 1) return { texte: 'demain ' + jjmm, classe: '' };
+    return { texte: jjmm, classe: '' };
+  }
+  const dateFrLongue = (j) => j.slice(8, 10) + '/' + j.slice(5, 7) + '/' + j.slice(0, 4);
+  function bornerChampDate(champ) {   // min = aujourd'hui, max = aujourd'hui + 60 jours (Bruxelles)
+    const auj = jourBruxelles();
+    champ.min = auj; champ.max = ajouterJours(auj, DATE_LIV_MAX_JOURS);
+    return auj;
+  }
 
   const DELAI_ENVOI_MS = CIBLE.envoiMs;       // au-delà, on demande au serveur si l'envoi est arrivé (statut)
   const DELAI_LECTURE_MS = CIBLE.lectureMs;   // délai maximum d'une lecture (cafés, interventions)
@@ -476,7 +540,7 @@
     'ACTION PACK', 'TOP MACHINE', 'GREYHOUND', 'TEXAS', 'KICKER', 'BILLARD', 'FLECHE', 'AUTRE'];
 
   const COULEURS = { 'PANNE': '#ef4444', 'MACHINE A CAFE': '#a855f7', 'ENTRETIEN': '#3b82f6', 'LIVRAISON': '#22c55e', 'LIVRAISON HORECA': '#14b8a6' };
-  const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison', 'LIVRAISON HORECA': 'Livraison Horeca' };
+  const LIBELLES = { 'PANNE': 'Panne', 'MACHINE A CAFE': 'Machine à café', 'ENTRETIEN': 'Entretien', 'LIVRAISON': 'Livraison machine', 'LIVRAISON HORECA': 'Livraison Horeca' };   // v14 : libellé seulement (valeur stockée LIVRAISON)
   const ICONES = {
     'PANNE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>',
     'MACHINE A CAFE': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v3M12 2v3"/></svg>',
@@ -500,6 +564,11 @@
     deja_completee: 'Cette livraison a déjà été complétée. La liste a été actualisée.',
     montant_inconnu: 'Le montant de cette vente est inconnu : décochez « À encaisser » ou prévenez Marc.',
     id_invalide: 'Identifiant d’envoi invalide. Rechargez la page et réessayez.',
+    // v14 : date de livraison
+    date_manquante: 'Choisissez une date de livraison.',
+    date_invalide: 'Date de livraison invalide.',
+    date_passee: 'La date de livraison ne peut pas être dans le passé.',
+    date_trop_loin: 'La date de livraison doit être dans les 60 jours.',
     push_inactif: 'Les alertes sont désactivées sur le serveur.',
     abonnement_invalide: 'Cet appareil a refusé l’abonnement. Réessayez.',
     trop_abonnements: 'Trop d’appareils abonnés (10 maximum). Désactivez un ancien appareil.',
@@ -813,6 +882,8 @@
     $('pastille').innerHTML = ICONES[type];
     $('pastille').appendChild(document.createTextNode(LIBELLES[type]));
     $('bloc-machines').classList.toggle('cache', type !== 'PANNE');
+    $('bloc-date').classList.toggle('cache', !(type === 'LIVRAISON' && AVEC_DATE_LIVRAISON));   // v14
+    bornerChampDate($('date-liv'));
     $('choix-type').classList.add('cache');
     $('form-envoi').classList.remove('cache');
     message('msg-envoi', '', '');
@@ -824,12 +895,20 @@
     etat.machines = new Set(['INDETERMINE']);
     dessinerMachines();
     $('nature').value = ''; $('recherche').value = '';
+    $('date-liv').value = ''; $('date-liv').disabled = false; $('date-indet').checked = false;   // v14 : aucun choix par défaut
     afficherCafeChoisi();
     document.documentElement.style.setProperty('--accent', '#e2e8f0');
     $('form-envoi').classList.add('cache');
     $('choix-type').classList.remove('cache');
     message('msg-envoi', '', '');
   }
+  // v14 : « Indéterminé » et une date s'excluent ; l'un des deux est obligatoire pour une livraison de jeux.
+  $('date-indet').addEventListener('change', () => {
+    const indet = $('date-indet').checked;
+    if (indet) $('date-liv').value = '';
+    $('date-liv').disabled = indet; message('msg-envoi', '', '');
+  });
+  $('date-liv').addEventListener('input', () => { if ($('date-liv').value) $('date-indet').checked = false; message('msg-envoi', '', ''); });
   $('btn-changer').addEventListener('click', () => {
     if (etat.envoiEnCours) return;
     const cafe = etat.cafe; revenirAuxTypes(); etat.cafe = cafe; afficherCafeChoisi();
@@ -906,12 +985,26 @@
   async function envoyer() {
     if (etat.envoiEnCours) return;
     if (!etat.cafe) { message('msg-envoi', 'erreur', 'Choisissez un café dans la liste.'); $('recherche').focus(); return; }
+    // v14 : livraison de jeux = une date OU « Indéterminé », obligatoire (le relais revérifie).
+    let dateLiv = null;
+    if (etat.type === 'LIVRAISON' && AVEC_DATE_LIVRAISON) {
+      if ($('date-indet').checked) dateLiv = 'indetermine';
+      else {
+        const err = erreurDateLivraison($('date-liv').value);
+        if (err) {
+          message('msg-envoi', 'erreur', err === 'date_manquante' ? 'Choisissez une date de livraison ou « Indéterminé ».' : MESSAGES[err]);
+          $('date-liv').focus(); return;
+        }
+        dateLiv = $('date-liv').value;
+      }
+    }
     // L'identifiant reste le même tant que l'envoi n'est pas confirmé (même après une erreur).
     if (!etat.envoi) etat.envoi = { id: nouvelId() };
     etat.envoi.corps = {
       action: 'envoyer', type: etat.type, licence: etat.cafe.licence, nom: etat.cafe.nom,
       appareil: etat.type === 'PANNE' ? MACHINES.filter((m) => etat.machines.has(m)).join(' , ') : '',
       nature: $('nature').value.trim() };
+    if (dateLiv) etat.envoi.corps.date_livraison = dateLiv;
     const envoi = etat.envoi;
     const btn = $('btn-envoyer');
     etat.envoiEnCours = true;
@@ -1078,7 +1171,7 @@
   }
   // Ordre des types dans la liste (demande de Marc, 09/10/2026). Tout type absent de cette liste compte comme PANNE.
   const ORDRE_TYPES = ['PANNE', 'ENTRETIEN', 'LIVRAISON', 'LIVRAISON HORECA', 'MACHINE A CAFE'];
-  const TITRES_TYPES = { 'PANNE': 'Pannes', 'ENTRETIEN': 'Entretiens', 'LIVRAISON': 'Livraisons',
+  const TITRES_TYPES = { 'PANNE': 'Pannes', 'ENTRETIEN': 'Entretiens', 'LIVRAISON': 'Livraisons machine',
                          'LIVRAISON HORECA': 'Livraisons Horeca', 'MACHINE A CAFE': 'Machines à café' };
   // Type d'une ligne : « Appareils café » par ÉGALITÉ STRICTE (majuscules, sans accents, espaces en trop retirés), comme l'écran,
   // AVANT le champ « type » du serveur (le script Google de secours le calcule avec « contient » et classerait
@@ -1132,6 +1225,18 @@
     if (i.nature) {
       const n = document.createElement('div'); n.className = 'nature'; n.textContent = i.nature; n.title = i.nature;
       contenu.appendChild(n);
+    }
+    // v14 : date de livraison (livraisons de jeux et Horeca) : « Livraison : » (gris) + valeur en rouge gras ; date passée :
+    // « EN RETARD · 12/10 » blanc sur fond rouge. Case vide = « indéterminée », jamais en retard.
+    // (Champ absent = serveur sans date, ex. script Google de secours : rien n'est affiché plutôt qu'un faux « indéterminée ».)
+    if ((type === 'LIVRAISON' || type === 'LIVRAISON HORECA') && i.date_livraison !== undefined) {
+      const lib = libelleDateLivraison(i.date_livraison || '');
+      const dl = document.createElement('div'); dl.className = 'date-liv';
+      const etiq = document.createElement('span'); etiq.className = 'etiq'; etiq.textContent = 'Livraison : ';
+      const val = document.createElement('span'); val.className = 'val' + (lib.classe ? ' ' + lib.classe : ''); val.textContent = lib.texte;
+      dl.append(etiq, val);
+      dl.title = i.date_livraison ? 'Date de livraison : ' + dateFrLongue(i.date_livraison) : 'Date de livraison indéterminée';
+      contenu.appendChild(dl);
     }
     const q = document.createElement('div'); q.className = 'qui'; q.textContent = qui;
     const t = document.createElement('div'); t.className = 'depuis'; t.textContent = quand;
@@ -1473,6 +1578,7 @@
     attr('resume').textContent = 'Ticket ' + l.ticket + (montantConnu(l) ? ' · ' + eur(l.montant) : '');
     attr('encaisser-texte').textContent = 'À encaisser auprès du client' + (montantConnu(l) ? ' : ' + eur(l.montant) : '');
     attr('encaisser').checked = false;
+    attr('date').value = bornerChampDate(attr('date'));   // v14 : aujourd'hui par défaut (Bruxelles), envoyé tel quel
     attr('recherche').value = '';
     message('msg-attribuer', '', '');
     afficherCafeAttrib();
@@ -1528,6 +1634,7 @@
     a.cafe = null; afficherCafeAttrib(); attr('recherche').value = ''; filtrerAttrib(); attr('recherche').focus();
   });
   attr('encaisser').addEventListener('change', () => message('msg-attribuer', '', ''));
+  attr('date').addEventListener('input', () => message('msg-attribuer', '', ''));
   attr('fermer').addEventListener('click', () => fermerAttribution());
   $('voile-attribuer').addEventListener('click', (ev) => { if (ev.target === $('voile-attribuer')) fermerAttribution(); });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && etat.attrib) fermerAttribution(); });
@@ -1535,7 +1642,7 @@
 
   function occupeAttribution(oui, texte) {
     occupe(attr('valider'), oui, texte);
-    ['fermer', 'autre', 'encaisser'].forEach((k) => { attr(k).disabled = oui; });
+    ['fermer', 'autre', 'encaisser', 'date'].forEach((k) => { attr(k).disabled = oui; });
   }
   async function validerAttribution() {
     const a = etat.attrib;
@@ -1543,10 +1650,15 @@
     if (!a.cafe) { message('msg-attribuer', 'erreur', 'Choisissez un café dans la liste.'); return; }
     const liv = a.liv, cafe = a.cafe, ticket = liv.ticket;
     const encaisser = attr('encaisser').checked === true;
-    const cle = [ticket, cafe.licence, cafe.nom, encaisser].join('|');
+    // v14 : date de livraison obligatoire (pas d'« Indéterminé » pour une vente comptoir) ; le relais revérifie.
+    const dateLiv = attr('date').value;
+    const errDate = erreurDateLivraison(dateLiv);
+    if (errDate) { message('msg-attribuer', 'erreur', MESSAGES[errDate]); attr('date').focus(); return; }
+    const cle = [ticket, cafe.licence, cafe.nom, encaisser, dateLiv].join('|');
     let envoi = etat.completions.get(ticket);
     if (!envoi || envoi.cle !== cle) { envoi = { id: nouvelId(), cle: cle }; etat.completions.set(ticket, envoi); }
-    const corps = { action: 'completer', id: envoi.id, ticket: ticket, licence: cafe.licence, nom: cafe.nom, encaisser: encaisser };
+    const corps = { action: 'completer', id: envoi.id, ticket: ticket, licence: cafe.licence, nom: cafe.nom, encaisser: encaisser,
+                    date_livraison: dateLiv };
 
     a.enCours = true;
     occupeAttribution(true, 'Envoi en cours…');
@@ -1568,7 +1680,8 @@
       etat.incompTraitees.add(ticket);
       fermerAttribution(true);
       afficherIncompletes();
-      toast('✓ Livraison attribuée : ' + cafe.nom + (encaisser && montantConnu(liv) ? ' · à encaisser ' + eur(liv.montant) : ''));
+      toast('✓ Livraison attribuée : ' + cafe.nom + (encaisser && montantConnu(liv) ? ' · à encaisser ' + eur(liv.montant) : '') +
+            ' · livraison : ' + libelleDateLivraison(dateLiv).texte);
       chargerIncompletes(false, true); chargerEnCours(false, true);
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
       deconnecterPour(r.erreur);
