@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v14 – Service technique</title>
+<title>Pannes v15 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -108,6 +108,21 @@
   .liste-cafes li { padding: 11px 12px; border-radius: 9px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
   .liste-cafes li:hover, .liste-cafes li.actif { background: color-mix(in srgb, var(--accent) 22%, var(--fond)); }
   .liste-cafes li .ville { color: var(--doux); font-size: .88rem; text-align: right; }
+  /* v15 : filtre C / Z et badge de licence */
+  .filtre-lic { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 2px 2px; }
+  .filtre-lic .lic { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--texte); font-size: .92rem; cursor: pointer; }
+  .filtre-lic .lic input { width: 22px; height: 22px; flex: none; }
+  .filtre-lic .lic-c input { accent-color: #38bdf8; }
+  .filtre-lic .lic-z input { accent-color: #f59e0b; }
+  .liste-cafes li .droite { display: flex; align-items: center; gap: 8px; flex: none; max-width: 55%; }
+  .badge-lic { flex: none; font-size: .72rem; font-weight: 800; line-height: 1; padding: 3px 6px; border-radius: 6px; }
+  .badge-lic.c { color: #0c2a3a; background: #7dd3fc; }
+  .badge-lic.z { color: #3a2600; background: #fcd34d; }
+  /* Même taille et mêmes couleurs que dans la liste (la règle « .choisi span » ne doit pas s'appliquer au badge) */
+  .choisi .badge-lic.badge-choisi { display: inline-block; margin-left: 8px; vertical-align: 1px; font-size: .72rem; }
+  .choisi .badge-lic.badge-choisi.c { color: #0c2a3a; }
+  .choisi .badge-lic.badge-choisi.z { color: #3a2600; }
+  .badge-lic.badge-choisi.cache { display: none; }
   .liste-cafes .vide { color: var(--doux); cursor: default; }
   .liste-cafes li.attente-cafes { align-items: center; justify-content: flex-start; gap: 10px; }
   .attente-cafes .chargement { width: 16px; height: 16px; flex: none; }
@@ -289,7 +304,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v14</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v15</small></h1>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
   <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
@@ -359,10 +374,15 @@
         <label class="champ" for="recherche">Café / salle</label>
         <div id="zone-recherche">
           <input id="recherche" type="search" placeholder="Rechercher un nom ou une ville…" role="combobox" aria-expanded="true" aria-controls="liste-cafes" autocomplete="off">
+          <!-- v15 : filtre par licence (C = adresse du café, Z = adresse de facturation Odoo) ; les deux cochées par défaut -->
+          <div class="filtre-lic" role="group" aria-label="Type d'adresse">
+            <label class="lic lic-c"><input id="lic-c" type="checkbox" checked><span>C · adresse du café</span></label>
+            <label class="lic lic-z"><input id="lic-z" type="checkbox" checked><span>Z · adresse de facturation</span></label>
+          </div>
           <ul id="liste-cafes" class="liste-cafes" role="listbox"></ul>
         </div>
         <div id="cafe-choisi" class="choisi cache">
-          <div><strong id="cafe-nom"></strong><span id="cafe-ville"></span></div>
+          <div><strong id="cafe-nom"></strong><span id="cafe-ville"></span><span id="cafe-badge" class="badge-lic badge-choisi cache"></span></div>
           <button id="btn-autre-cafe" type="button">Changer</button>
         </div>
       </div>
@@ -448,10 +468,14 @@
     <p id="attr-resume" class="resume-liv"></p>
     <div id="attr-zone-recherche">
       <input id="attr-recherche" type="search" placeholder="Rechercher un nom ou une ville…" role="combobox" aria-expanded="true" aria-controls="attr-liste" autocomplete="off">
+      <div class="filtre-lic" role="group" aria-label="Type d'adresse">
+        <label class="lic lic-c"><input id="attr-lic-c" type="checkbox" checked><span>C · adresse du café</span></label>
+        <label class="lic lic-z"><input id="attr-lic-z" type="checkbox" checked><span>Z · adresse de facturation</span></label>
+      </div>
       <ul id="attr-liste" class="liste-cafes" role="listbox"></ul>
     </div>
     <div id="attr-choisi" class="choisi cache">
-      <div><strong id="attr-cafe-nom"></strong><span id="attr-cafe-ville"></span></div>
+      <div><strong id="attr-cafe-nom"></strong><span id="attr-cafe-ville"></span><span id="attr-cafe-badge" class="badge-lic badge-choisi cache"></span></div>
       <button id="attr-autre" type="button">Changer</button>
     </div>
     <!-- v14 : date de livraison obligatoire (aujourd'hui par défaut ; jamais dans le passé ; au plus 60 jours) -->
@@ -896,6 +920,7 @@
     dessinerMachines();
     $('nature').value = ''; $('recherche').value = '';
     $('date-liv').value = ''; $('date-liv').disabled = false; $('date-indet').checked = false;   // v14 : aucun choix par défaut
+    remettreFiltre('lic');   // v15 : C et Z cochées
     afficherCafeChoisi();
     document.documentElement.style.setProperty('--accent', '#e2e8f0');
     $('form-envoi').classList.add('cache');
@@ -917,10 +942,56 @@
   /* ---------- Recherche des cafés ---------- */
   const normaliser = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let actif = -1;
-  // Même filtrage pour la recherche du formulaire et pour la fenêtre « Attribuer un café » : tous les mots, nom ou ville, 80 résultats.
-  function chercherCafes(texte) {
+  // v15 : licence C (adresse du café) ou Z (adresse de facturation Odoo) ; '' pour toute autre licence (F, B…).
+  function lettreLicence(c) { const l = String((c && c.licence) || '').trim().toUpperCase(); return l[0] === 'C' || l[0] === 'Z' ? l[0] : ''; }
+  // Filtre C / Z (ET avec la recherche texte) : une licence ni C ni Z n'apparaît que si les deux cases sont cochées.
+  function passeLicence(c, f) {
+    const l = lettreLicence(c);
+    return l === 'C' ? f.c : l === 'Z' ? f.z : (f.c && f.z);
+  }
+  // Cases du formulaire (prefixe 'lic') ou de la fenêtre « Attribuer » (prefixe 'attr-lic').
+  const filtreDe = (prefixe) => ({ c: $(prefixe + '-c').checked, z: $(prefixe + '-z').checked });
+  function remettreFiltre(prefixe) { $(prefixe + '-c').checked = true; $(prefixe + '-z').checked = true; }
+  // Interdit de décocher les deux : la dernière case cochée reste cochée.
+  function lierFiltre(prefixe, refiltrer) {
+    ['c', 'z'].forEach((k) => $(prefixe + '-' + k).addEventListener('change', (ev) => {
+      const f = filtreDe(prefixe);
+      if (!f.c && !f.z) { ev.target.checked = true; return; }
+      refiltrer();
+    }));
+  }
+  // Badge C / Z du café CHOISI (même règle et mêmes couleurs que la liste) ; caché si aucun café ou licence ni C ni Z.
+  function badgeChoisi(el, c) {
+    const l = c ? lettreLicence(c) : '';
+    el.textContent = l;
+    el.className = 'badge-lic badge-choisi' + (l ? ' ' + l.toLowerCase() : ' cache');
+    el.title = l === 'C' ? 'Licence C : adresse du café' : l === 'Z' ? 'Licence Z : adresse de facturation' : '';
+  }
+  // Ligne de résultat : nom à gauche ; ville + badge C / Z à droite (tout en textContent).
+  function ligneCafe(c, i, choisir) {
+    const li = document.createElement('li'); li.setAttribute('role', 'option'); if (i === 0) li.classList.add('actif');
+    const n = document.createElement('span'); n.textContent = c.nom;
+    const droite = document.createElement('span'); droite.className = 'droite';
+    const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
+    droite.appendChild(v);
+    const l = lettreLicence(c);
+    if (l) {
+      const b = document.createElement('span'); b.className = 'badge-lic ' + l.toLowerCase(); b.textContent = l;
+      b.title = l === 'C' ? 'Licence C : adresse du café' : 'Licence Z : adresse de facturation';
+      droite.appendChild(b);
+    }
+    li.append(n, droite); li.addEventListener('click', () => choisir(c)); li._cafe = c;
+    return li;
+  }
+  // Même filtrage pour la recherche du formulaire et pour la fenêtre « Attribuer un café » : tous les mots, nom ou ville,
+  // filtre C / Z (v15), 80 résultats.
+  function chercherCafes(texte, filtre) {
+    const f = filtre || { c: true, z: true };
     const mots = normaliser(texte).trim().split(/\s+/).filter(Boolean);
-    return etat.cafes.filter((c) => { const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m)); }).slice(0, 80);
+    return etat.cafes.filter((c) => {
+      if (!passeLicence(c, f)) return false;
+      const t = normaliser(c.nom + ' ' + c.ville); return mots.every((m) => t.includes(m));
+    }).slice(0, 80);
   }
   function filtrer() {
     if (!etat.cafes.length) {
@@ -928,17 +999,13 @@
       if (etat.motdepasse) ul0.appendChild(indicateurCafes('li'));
       return;
     }
-    const res = chercherCafes($('recherche').value);
+    const res = chercherCafes($('recherche').value, filtreDe('lic'));
     const ul = $('liste-cafes'); ul.innerHTML = ''; actif = res.length ? 0 : -1;
     if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
-    res.forEach((c, i) => {
-      const li = document.createElement('li'); li.setAttribute('role', 'option'); if (i === 0) li.classList.add('actif');
-      const n = document.createElement('span'); n.textContent = c.nom;
-      const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
-      li.append(n, v); li.addEventListener('click', () => choisirCafe(c)); li._cafe = c; ul.appendChild(li);
-    });
+    res.forEach((c, i) => ul.appendChild(ligneCafe(c, i, choisirCafe)));
   }
   $('recherche').addEventListener('input', filtrer);
+  lierFiltre('lic', filtrer);   // v15
   $('recherche').addEventListener('keydown', (ev) => {
     const items = [...$('liste-cafes').querySelectorAll('li[role=option]')];
     if (!items.length) return;
@@ -954,6 +1021,7 @@
     $('zone-recherche').classList.toggle('cache', !!c);
     $('cafe-choisi').classList.toggle('cache', !c);
     if (c) { $('cafe-nom').textContent = c.nom; $('cafe-ville').textContent = ' ' + c.ville; }
+    badgeChoisi($('cafe-badge'), c);   // v15 : badge C / Z du café choisi (retiré si aucun café)
   }
   $('btn-autre-cafe').addEventListener('click', () => {
     if (etat.envoiEnCours) return;
@@ -1579,6 +1647,7 @@
     attr('encaisser-texte').textContent = 'À encaisser auprès du client' + (montantConnu(l) ? ' : ' + eur(l.montant) : '');
     attr('encaisser').checked = false;
     attr('date').value = bornerChampDate(attr('date'));   // v14 : aujourd'hui par défaut (Bruxelles), envoyé tel quel
+    remettreFiltre('attr-lic');   // v15 : C et Z cochées à chaque ouverture
     attr('recherche').value = '';
     message('msg-attribuer', '', '');
     afficherCafeAttrib();
@@ -1598,21 +1667,18 @@
     attr('zone-recherche').classList.toggle('cache', !!c);
     attr('choisi').classList.toggle('cache', !c);
     if (c) { attr('cafe-nom').textContent = c.nom; attr('cafe-ville').textContent = ' ' + c.ville; }
+    badgeChoisi(attr('cafe-badge'), c);   // v15
     attr('valider').disabled = !c || !!(a && a.enCours);
   }
   function filtrerAttrib() {
     const ul = attr('liste'); ul.innerHTML = ''; actifAttr = -1;
     if (!etat.cafes.length) { if (etat.motdepasse) ul.appendChild(indicateurCafes('li')); return; }
-    const res = chercherCafes(attr('recherche').value);
+    const res = chercherCafes(attr('recherche').value, filtreDe('attr-lic'));
     if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
     actifAttr = 0;
-    res.forEach((c, i) => {
-      const li = document.createElement('li'); li.setAttribute('role', 'option'); if (i === 0) li.classList.add('actif');
-      const n = document.createElement('span'); n.textContent = c.nom;
-      const v = document.createElement('span'); v.className = 'ville'; v.textContent = c.ville;
-      li.append(n, v); li.addEventListener('click', () => choisirCafeAttrib(c)); li._cafe = c; ul.appendChild(li);
-    });
+    res.forEach((c, i) => ul.appendChild(ligneCafe(c, i, choisirCafeAttrib)));
   }
+  lierFiltre('attr-lic', filtrerAttrib);   // v15
   function choisirCafeAttrib(c) {
     const a = etat.attrib;
     if (!a || a.enCours) return;
