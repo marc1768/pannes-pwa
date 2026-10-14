@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v18 – Service technique</title>
+<title>Pannes v19 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -366,7 +366,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v18</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v19</small></h1>
   <!-- v17 : onglet Congés (2e mot de passe, demandé à chaque ouverture, jamais enregistré sur l'appareil) -->
   <button id="btn-conges" class="btn-lien cache" type="button">Congés</button>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
@@ -2271,10 +2271,16 @@
   function cgMajBouton() {
     const b = $('cg-enregistrer'), n = cg.choix.size;
     const annul = cg.type === CG_ANNULER;
-    b.disabled = !n || !cg.tech;
+    // v19 : solde vérifié avant l'envoi (le relais revérifie et refuse de toute façon).
+    const s = !annul && cg.tech && cg.d && cg.d.soldes[cg.tech] && cg.d.soldes[cg.tech][cg.type];
+    const restant = s ? Math.max(0, s.restant) : Infinity;
+    const trop = !annul && cg.tech && n > restant;
+    b.disabled = !n || !cg.tech || trop;
     b.classList.toggle('annul', annul);
     $('cg-remarque').classList.toggle('cache', annul);
     b.textContent = !cg.tech ? 'Choisissez un technicien'
+      : (!annul && restant === 0) ? 'Plus de ' + cg.type + ' disponible pour ' + cg.tech + ' (solde 0)'
+      : trop ? 'Solde ' + cg.type + ' insuffisant : ' + restant + ' restant' + (restant > 1 ? 's' : '') + ' pour ' + cg.tech
       : !n ? (annul ? 'Touchez les jours à annuler' : 'Choisissez des jours')
       : annul ? 'Annuler ' + n + ' jour' + (n > 1 ? 's' : '') + ' de ' + cg.tech
       : 'Encoder ' + n + ' jour' + (n > 1 ? 's' : '') + ' ' + cg.type + ' pour ' + cg.tech;
@@ -2366,34 +2372,32 @@
   }
 
   /* --- écritures (une à la fois ; le relais revérifie tout) --- */
-  async function cgEnregistrer(forcer) {
+  // v19 : plus de « forcer » — un solde insuffisant est TOUJOURS refusé (règle de Marc du 14/10/2026).
+  async function cgEnregistrer() {
     const btn = $('cg-enregistrer');
-    if (!forcer && btn.disabled) return;
+    if (btn.disabled) return;
     if (cg.type === CG_ANNULER) return cgAnnulerJours();
     const dates = [...cg.choix].sort();
     const corps = { action: 'conges_ajouter', technicien: cg.tech, type: cg.type, dates, remarque: $('cg-remarque').value };
-    if (forcer) corps.forcer = true;
     message('cg-msg', '', '');
     occupe(btn, true, 'Enregistrement…');
     const r = await cgAppel(corps);
     btn.disabled = false; cgMajBouton();
     if (r.ok) {
-      toast(dates.length + ' jour' + (dates.length > 1 ? 's' : '') + ' ' + cg.type + ' encodé' + (dates.length > 1 ? 's' : '') + ' pour ' + cg.tech +
-            (r.solde_depasse ? ' (solde dépassé)' : ''));
+      toast(dates.length + ' jour' + (dates.length > 1 ? 's' : '') + ' ' + cg.type + ' encodé' + (dates.length > 1 ? 's' : '') + ' pour ' + cg.tech);
       cg.choix.clear(); $('cg-remarque').value = '';
       return cgCharger();
     }
     if (r.erreur === 'solde_insuffisant') {
-      const ok = window.confirm('Solde insuffisant : il reste ' + r.restant + ' jour(s) de ' + r.type + ' à ' + cg.tech + ', vous en encodez ' +
-                                r.demandes + '.\n\nEncoder quand même ?');
-      if (ok) return cgEnregistrer(true);
-      return;
+      message('cg-msg', 'erreur', 'Solde insuffisant : il reste ' + Math.max(0, r.restant) + ' jour(s) de ' + r.type + ' à ' + cg.tech +
+              ', ' + r.demandes + ' demandé(s). Rien n’a été encodé.');
+      return cgCharger();
     }
     if (CG_VERROU[r.erreur]) return;
     message('cg-msg', 'erreur', cgErreur(r) + (r.date ? ' : ' + cgFr(r.date) + '.' : ''));
     if (r.erreur === 'deja_encode' || r.erreur === 'jour_ferie') cgCharger();
   }
-  $('cg-enregistrer').addEventListener('click', () => cgEnregistrer(false));
+  $('cg-enregistrer').addEventListener('click', () => cgEnregistrer());
 
   // v18 : annuler les jours sélectionnés du technicien choisi (une suppression par jour, l'une après l'autre).
   async function cgAnnulerJours() {
