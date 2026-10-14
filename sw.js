@@ -18,7 +18,7 @@
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
 // v17 : cache « pannes-v18 » (« pannes-v17 » reste réservé au retour arrière v16 -> v15) ; titre v17, onglet Congés.
-const VERSION = 'pannes-v18';
+const VERSION = 'pannes-v20';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v17 – Service technique</title>
+<title>Pannes v18 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -331,11 +331,21 @@
   .cg-j.vide { visibility: hidden; }
   .cg-j.we { background: var(--fond); }
   .cg-j:disabled { cursor: default; }
-  .cg-j.choisi { outline: 3px solid #fff; outline-offset: -3px; background: color-mix(in srgb, var(--c, #e2e8f0) 40%, var(--carte)); }
+  .cg-j.cg-sel {  /* v18 : classe propre (« .choisi » de l'écran cafés agrandissait le texte) */ outline: 3px solid #fff; outline-offset: -3px; background: color-mix(in srgb, var(--c, #e2e8f0) 40%, var(--carte)); }
   .cg-j.auj .n { color: #fca5a5; }
   .cg-j .n { font-weight: 750; font-size: .85rem; }
-  .cg-j .g, .cg-j .c { border-radius: 5px; padding: 0 3px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cg-j .g { font-size: .62rem; opacity: .9; }
+  /* v18 : une ligne par élément (garde, congé), nom à gauche et type à droite */
+  /* Sur téléphone (cases étroites), le type passe sous le nom, aligné à droite, au lieu de tronquer le nom. */
+  .cg-j .g, .cg-j .c { border-radius: 5px; padding: 0 4px; font-weight: 700; display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 4px; min-width: 0; }
+  .cg-j .g > span, .cg-j .c > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cg-j .g > span:first-child, .cg-j .c > span:first-child { flex: 0 1 auto; min-width: 0; }
+  .cg-j .g > span:last-child, .cg-j .c > span:last-child { margin-left: auto; font-weight: 800; }
+  .cg-j .g { font-size: .62rem; opacity: .85; }
+  .cg-j .g > span:last-child { font-weight: 600; font-style: italic; }
+  .cg-j.cg-sel.annul { outline-color: #f87171; background: color-mix(in srgb, #f87171 30%, var(--carte)); }
+  .cg-choix button.annuler.actif { border-color: #f87171; background: color-mix(in srgb, #f87171 30%, var(--carte2)); }
+  #cg-enregistrer { position: sticky; bottom: 10px; z-index: 5; box-shadow: 0 4px 18px rgba(0,0,0,.45); }
+  #cg-enregistrer.annul:not(:disabled) { background: #b91c1c; border-color: #b91c1c; color: #fff; }
   .cg-j .f { color: #c4b5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .62rem; }
   .cg-ligne { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--bord); flex-wrap: wrap; }
   .cg-ligne .d { min-width: 92px; font-weight: 650; }
@@ -356,7 +366,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v17</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v18</small></h1>
   <!-- v17 : onglet Congés (2e mot de passe, demandé à chaque ouverture, jamais enregistré sur l'appareil) -->
   <button id="btn-conges" class="btn-lien cache" type="button">Congés</button>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
@@ -506,7 +516,7 @@
         <button type="button" data-cg-vue="garde">Fériés et garde</button>
       </div>
       <div id="cg-vue-encoder">
-        <p class="aide">Choisissez le technicien, le type, puis touchez les jours. Week-ends et fériés ne sont pas sélectionnables.</p>
+        <p class="aide">Choisissez le technicien, le type (ou « Annuler des jours »), touchez les jours, puis validez avec le bouton en bas. Week-ends et fériés ne sont pas sélectionnables.</p>
         <div id="cg-techs" class="cg-choix"></div>
         <div id="cg-types" class="cg-choix"></div>
         <div id="cg-calendrier" class="cg-cal"></div>
@@ -2048,7 +2058,8 @@
   const CG_INACTIF_MS = 15 * 60 * 1000;
   const CG_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const CG_JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  const CG_TYPES = [['VA', 'VA · vacances'], ['RJF', 'RJF · récup. férié'], ['R', 'R · récupération']];
+  const CG_TYPES = [['VA', 'VA · vacances'], ['RJF', 'RJF · récup. férié'], ['R', 'R · récupération'], ['ANNULER', '✕ Annuler des jours']];
+  const CG_ANNULER = 'ANNULER';      // v18 : mode suppression (aucun type « ANNULER » n'est envoyé au relais)
   const CG_MESSAGES = {
     mot_de_passe_conges: 'Mot de passe congés incorrect.',
     bloque_conges: 'Trop d’essais : les congés sont bloqués 10 minutes (les interventions restent utilisables).',
@@ -2210,8 +2221,12 @@
     });
     const zy = $('cg-types'); zy.innerHTML = '';
     CG_TYPES.forEach(([code, libelle]) => {
-      const b = cgEl('button', code === cg.type ? 'actif' : '', libelle); b.type = 'button';
-      b.addEventListener('click', () => { cg.type = code; cgRelancerMinuteur(); cgAfficherChoix(); cgMajBouton(); });
+      const b = cgEl('button', (code === cg.type ? 'actif' : '') + (code === CG_ANNULER ? ' annuler' : ''), libelle); b.type = 'button';
+      b.addEventListener('click', () => {
+        // Passer de « ajouter » à « annuler » (ou l'inverse) change les jours sélectionnables : sélection remise à zéro.
+        if ((code === CG_ANNULER) !== (cg.type === CG_ANNULER)) cg.choix.clear();
+        cg.type = code; cgRelancerMinuteur(); cgAfficherChoix(); cgAfficherCalendrier();
+      });
       zy.appendChild(b);
     });
   }
@@ -2226,26 +2241,27 @@
       const jour = g.date, js = cgJourSem(jour), fer = feries.get(jour);
       const conges = d.jours.filter((x) => x.date === jour);
       const deja = cg.tech && conges.some((x) => x.technicien === cg.tech);
-      const b = cgEl('button', 'cg-j' + (js >= 5 ? ' we' : '') + (jour === auj ? ' auj' : '') + (cg.choix.has(jour) ? ' choisi' : ''));
+      const annul = cg.type === CG_ANNULER;
+      const b = cgEl('button', 'cg-j' + (js >= 5 ? ' we' : '') + (jour === auj ? ' auj' : '') + (cg.choix.has(jour) ? ' cg-sel' : '') + (annul ? ' annul' : ''));
       b.type = 'button'; b.dataset.jour = jour;
-      b.disabled = !cg.tech || js >= 5 || !!fer || deja;
+      // Ajouter : jour ouvrable, pas férié, pas déjà pris. Annuler : seulement les jours où ce technicien a un congé.
+      b.disabled = !cg.tech || (annul ? !deja : (js >= 5 || !!fer || deja));
       if (cg.tech) b.style.setProperty('--c', cgCouleur(cg.tech));
       b.appendChild(cgEl('span', 'n', String(Number(jour.slice(8)))));
-      if (g.tech) {
-        const s = cgEl('span', 'g', g.tech + (g.remplace ? ' (rempl.)' : ''));
-        s.style.background = cgCouleur(g.tech); s.style.color = cgTexteSur(cgCouleur(g.tech)); s.title = 'De garde';
+      // v18 : une ligne par élément, nom à gauche, nature à droite (garde / VA / RJF / R).
+      const ligne = (classe, nom, etiquette, titre) => {
+        const s = cgEl('span', classe);
+        s.appendChild(cgEl('span', '', nom)); s.appendChild(cgEl('span', '', etiquette));
+        s.style.background = cgCouleur(nom); s.style.color = cgTexteSur(cgCouleur(nom)); s.title = titre;
         b.appendChild(s);
-      }
+      };
+      if (g.tech) ligne('g', g.tech, g.remplace ? 'garde (rempl.)' : 'garde', 'De garde');
       if (fer) b.appendChild(cgEl('span', 'f', fer.nom + (fer.technicien ? ' · ' + fer.technicien : '')));
-      conges.forEach((x) => {
-        const s = cgEl('span', 'c', x.technicien + ' ' + x.type);
-        s.style.background = cgCouleur(x.technicien); s.style.color = cgTexteSur(cgCouleur(x.technicien));
-        b.appendChild(s);
-      });
+      conges.forEach((x) => ligne('c', x.technicien, x.type, x.type + (x.remarque ? ' · ' + x.remarque : '')));
       b.addEventListener('click', () => {
         if (b.disabled) return;
         if (cg.choix.has(jour)) cg.choix.delete(jour); else cg.choix.add(jour);
-        b.classList.toggle('choisi', cg.choix.has(jour));
+        b.classList.toggle('cg-sel', cg.choix.has(jour));
         cgRelancerMinuteur(); cgMajBouton();
       });
       z.appendChild(b);
@@ -2254,8 +2270,13 @@
   }
   function cgMajBouton() {
     const b = $('cg-enregistrer'), n = cg.choix.size;
+    const annul = cg.type === CG_ANNULER;
     b.disabled = !n || !cg.tech;
-    b.textContent = !cg.tech ? 'Choisissez un technicien' : !n ? 'Choisissez des jours'
+    b.classList.toggle('annul', annul);
+    $('cg-remarque').classList.toggle('cache', annul);
+    b.textContent = !cg.tech ? 'Choisissez un technicien'
+      : !n ? (annul ? 'Touchez les jours à annuler' : 'Choisissez des jours')
+      : annul ? 'Annuler ' + n + ' jour' + (n > 1 ? 's' : '') + ' de ' + cg.tech
       : 'Encoder ' + n + ' jour' + (n > 1 ? 's' : '') + ' ' + cg.type + ' pour ' + cg.tech;
   }
   function cgAfficherListeMois() {
@@ -2348,6 +2369,7 @@
   async function cgEnregistrer(forcer) {
     const btn = $('cg-enregistrer');
     if (!forcer && btn.disabled) return;
+    if (cg.type === CG_ANNULER) return cgAnnulerJours();
     const dates = [...cg.choix].sort();
     const corps = { action: 'conges_ajouter', technicien: cg.tech, type: cg.type, dates, remarque: $('cg-remarque').value };
     if (forcer) corps.forcer = true;
@@ -2372,6 +2394,30 @@
     if (r.erreur === 'deja_encode' || r.erreur === 'jour_ferie') cgCharger();
   }
   $('cg-enregistrer').addEventListener('click', () => cgEnregistrer(false));
+
+  // v18 : annuler les jours sélectionnés du technicien choisi (une suppression par jour, l'une après l'autre).
+  async function cgAnnulerJours() {
+    const btn = $('cg-enregistrer');
+    const liste = cg.d.jours.filter((x) => x.technicien === cg.tech && cg.choix.has(x.date))
+                            .sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (!liste.length) { cg.choix.clear(); return cgAfficherCalendrier(); }
+    const detail = liste.map((x) => cgCourt(x.date) + ' ' + x.type).join(', ');
+    if (!window.confirm('Annuler ' + liste.length + ' jour' + (liste.length > 1 ? 's' : '') + ' de ' + cg.tech + ' ?\n\n' + detail)) return;
+    message('cg-msg', '', '');
+    occupe(btn, true, 'Annulation…');
+    let faits = 0, echec = null;
+    for (const x of liste) {
+      const r = await cgAppel({ action: 'conges_supprimer', id: x.id });
+      if (r.ok) { faits++; continue; }
+      echec = r; break;
+    }
+    btn.disabled = false;
+    if (echec && CG_VERROU[echec.erreur]) return;
+    cg.choix.clear();
+    if (faits) toast(faits + ' jour' + (faits > 1 ? 's' : '') + ' annulé' + (faits > 1 ? 's' : '') + ' pour ' + cg.tech);
+    if (echec) message('cg-msg', 'erreur', cgErreur(echec) + (faits ? ' (' + faits + ' sur ' + liste.length + ' annulés)' : ''));
+    return cgCharger();
+  }
 
   async function cgSupprimer(x, btn) {
     if (!window.confirm('Supprimer ' + x.type + ' de ' + x.technicien + ' le ' + cgFr(x.date) + ' ?')) return;
