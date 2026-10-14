@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v20 – Service technique</title>
+<title>Pannes v21 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -364,7 +364,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v20</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v21</small></h1>
   <!-- v17 : onglet Congés (2e mot de passe, demandé à chaque ouverture, jamais enregistré sur l'appareil) -->
   <button id="btn-conges" class="btn-lien cache" type="button">Congés</button>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
@@ -530,6 +530,7 @@
       <div id="cg-vue-garde" class="cache">
         <!-- v20 : la garde se remplace dans « Encoder » (type « ⇄ Remplacer garde ») -->
         <h3>Fériés de l’année</h3>
+        <p class="aide">Le RJF (et la R si le férié tombe un dimanche) est crédité dès que vous choisissez le technicien, même pour un férié à venir. Un changement est refusé si l’ancien technicien a déjà utilisé ce jour.</p>
         <div id="cg-feries"></div>
       </div>
     </div>
@@ -2068,6 +2069,7 @@
     periode_trop_longue: 'Un remplacement dure au plus 62 jours.',
     periode_invalide: 'Période invalide.',
     deja_de_garde: 'Ce technicien est déjà de garde ce jour-là',
+    ferie_deja_utilise: 'Changement refusé : l’ancien technicien a déjà utilisé ce jour',
     technicien_en_conge: 'Ce technicien est en congé ce jour-là'
   };
   const cg = { mdp: '', d: null, annee: 0, mois: 0, vue: 'encoder', tech: '', type: 'VA', choix: new Set(), minuteur: null };
@@ -2197,8 +2199,11 @@
       pt.style.background = x.couleur; td.appendChild(pt); td.appendChild(document.createTextNode(x.nom)); tr.appendChild(td);
       const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
       tr.appendChild(cell(s.VA, '(' + s.VA.pris + ' pris, ' + pl(s.VA.planifies, 'prévu') + ')'));
-      tr.appendChild(cell(s.RJF, s.RJF.planifies ? '(' + pl(s.RJF.planifies, 'prévu') + ')' : ''));
-      tr.appendChild(cell(s.R, s.R.planifies ? '(' + pl(s.R.planifies, 'prévue') + ')' : ''));
+      // v21 : « dont N à venir » = crédits de fériés prestés pas encore passés (comptés dès l'attribution).
+      const det = (x, mot) => { const p = []; if (x.planifies) p.push(pl(x.planifies, mot)); if (x.a_venir) p.push('dont ' + x.a_venir + ' à venir');
+                                return p.length ? '(' + p.join(', ') + ')' : ''; };
+      tr.appendChild(cell(s.RJF, det(s.RJF, 'prévu')));
+      tr.appendChild(cell(s.R, det(s.R, 'prévue')));
       t.appendChild(tr);
     });
     z.appendChild(t);
@@ -2346,6 +2351,11 @@
     if (cg.type === CG_ANNULER) return cgAnnulerJours();
     if (cg.type === CG_GARDE) return cgRemplacerGarde();
     const dates = [...cg.choix].sort();
+    // v21 : un seul technicien en congé à la fois -> avertissement (Marc peut passer outre).
+    const autres = dates.map((j) => ({ j, qui: cg.d.jours.filter((x) => x.date === j && x.technicien !== cg.tech).map((x) => x.technicien + ' (' + x.type + ')') }))
+                        .filter((x) => x.qui.length);
+    if (autres.length && !window.confirm('Attention : un autre technicien est déjà en congé.\n\n' +
+        autres.map((x) => cgCourt(x.j) + ' : ' + x.qui.join(', ')).join('\n') + '\n\nEncoder quand même pour ' + cg.tech + ' ?')) return;
     const corps = { action: 'conges_ajouter', technicien: cg.tech, type: cg.type, dates, remarque: $('cg-remarque').value };
     message('cg-msg', '', '');
     occupe(btn, true, 'Enregistrement…');
@@ -2443,6 +2453,9 @@
     sel.disabled = false;
     if (r.ok) { toast(f.nom + ' : ' + (sel.value || 'personne')); return cgCharger(); }
     sel.value = f.technicien || '';
+    if (r.erreur === 'ferie_deja_utilise')
+      return message('cg-msg', 'erreur', 'Changement refusé : ' + r.technicien + ' a déjà utilisé ' + (r.type === 'R' ? 'la R' : 'le RJF') +
+                     ' de ce férié (' + cgFr(f.date) + '). Annulez d’abord un de ses ' + r.type + ', puis recommencez.');
     if (!CG_VERROU[r.erreur]) message('cg-msg', 'erreur', cgErreur(r));
   }
   /* ---------- Démarrage ---------- */
