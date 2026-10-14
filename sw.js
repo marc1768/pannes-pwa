@@ -3,6 +3,7 @@
 // Les appels au serveur (relais Cloudflare workers.dev, ou script Google) ne sont jamais interceptés :
 // autre domaine et méthode POST.
 //
+// v16 : version de cache relevée (titre v16, étiquette « Réservée · NOM » sur les cartes en attente réservées).
 // v15 : version de cache relevée (titre v15, filtre C / Z sur la liste des cafés, badge C / Z).
 // v14 : version de cache relevée (titre v14, date de livraison : saisie et affichage ; « Livraison » affiché « Livraison machine »).
 // v13 : version de cache relevée (titre v13, bloc « Rapports à imprimer » et fiche imprimable).
@@ -16,7 +17,7 @@
 // puis remis à jour en arrière-plan depuis GitHub (la nouvelle version est utilisée à l'ouverture
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
-const VERSION = 'pannes-v15';
+const VERSION = 'pannes-v16';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

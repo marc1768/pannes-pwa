@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v15 – Service technique</title>
+<title>Pannes v16 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -194,6 +194,8 @@
   .inter[data-type="LIVRAISON HORECA"] .nature { -webkit-line-clamp: 3; }
   .inter .qui { color: var(--texte); font-size: .92rem; }
   .inter .depuis { color: var(--doux); font-size: .88rem; }
+  /* v16 : « Réservée · JULIEN » (cyan gras) sur une carte en attente réservée dans AppSheet */
+  .inter .reservee { margin-top: 3px; font-size: .9rem; font-weight: 800; color: #22d3ee; overflow-wrap: anywhere; }
   /* v14 : date de livraison (saisie et affichage) */
   input[type=date] { min-height: 48px; color-scheme: dark; }
   input[type=date]:disabled { opacity: .45; }
@@ -304,7 +306,7 @@
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v15</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v16</small></h1>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
   <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
@@ -1309,6 +1311,12 @@
     const q = document.createElement('div'); q.className = 'qui'; q.textContent = qui;
     const t = document.createElement('div'); t.className = 'depuis'; t.textContent = quand;
     contenu.append(q, t);
+    // v16 : réservation faite dans AppSheet (lecture seule ici) : seulement sur une carte « En attente » réservée.
+    if (i.statut === 'En attente' && i.reserve_par) {
+      const r = document.createElement('div'); r.className = 'reservee';
+      r.textContent = 'Réservée · ' + i.reserve_par;
+      contenu.appendChild(r);
+    }
     const p = document.createElement('button');
     p.type = 'button'; p.className = 'poubelle';
     p.setAttribute('aria-label', 'Annuler l’intervention ' + i.cafe);
