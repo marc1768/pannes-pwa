@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v21 – Service technique</title>
+<title>Pannes v22 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -358,15 +358,31 @@
   .cg-rh { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .cg-rh input { width: 22px; height: 22px; accent-color: var(--livraison); }
   .cg-vide { color: var(--doux); padding: 8px 0; }
+  /* v22 : direction (sans mot de passe congés) : « Mois RH » et bascule des écrans TV, dans l'en-tête */
+  header { flex-wrap: wrap; }
+  #ecrans-boutons { display: contents; }
+  #direction { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .btn-ecran { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.1; padding: 5px 10px; min-width: 84px; }
+  .btn-ecran b { font-size: .9rem; } .btn-ecran small { font-size: .72rem; color: var(--doux); }
+  .btn-ecran.conges { background: var(--entretien); border-color: var(--entretien); color: #fff; }
+  .btn-ecran.conges small { color: #fff; }
+  .btn-ecran.horsligne { opacity: .55; }
+  .btn-ecran:disabled { cursor: wait; }
+  @media (max-width: 560px) { #direction { order: 5; width: 100%; } }
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v21</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v22</small></h1>
   <!-- v17 : onglet Congés (2e mot de passe, demandé à chaque ouverture, jamais enregistré sur l'appareil) -->
   <button id="btn-conges" class="btn-lien cache" type="button">Congés</button>
+  <!-- v22 : « Mois RH » (sans mot de passe congés) et un bouton par écran TV (Pi) : touche = bascule Interventions / Congés -->
+  <div id="direction" class="cache">
+    <button id="btn-rh" class="btn-lien" type="button">Mois RH</button>
+    <span id="ecrans-boutons"></span>
+  </div>
   <!-- v12.1 : alertes sur cet appareil (Web Push), dans l'en-tête. Cloche cachée tant que le relais n'a pas répondu « actif ». -->
   <button id="btn-cloche" class="cache" type="button" aria-label="Alertes sur cet appareil" title="Alertes sur cet appareil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   <button id="btn-deconnexion" class="btn-lien cache" type="button">Se déconnecter</button>
@@ -486,6 +502,24 @@
 
   </section>
 
+  <!-- v22 : Écran « Mois RH » : VA du mois à déclarer, case « Encodé ». Mot de passe de la PWA seulement. -->
+  <section id="ecran-rh" class="cache">
+    <div class="titre-encours">
+      <h2>Mois RH</h2>
+      <button id="rh-retour" class="btn-lien" type="button">← Interventions</button>
+    </div>
+    <div class="boite">
+      <div class="cg-mois">
+        <button id="rh-prec" class="btn-lien" type="button" aria-label="Mois précédent">‹</button>
+        <strong id="rh-titre-mois"></strong>
+        <button id="rh-suiv" class="btn-lien" type="button" aria-label="Mois suivant">›</button>
+      </div>
+      <div id="rh-msg"></div>
+      <p id="rh-compteur" class="aide"></p>
+      <div id="rh-liste"></div>
+    </div>
+  </section>
+
   <!-- v17 : Écran 3 : congés, récupérations et gardes (mot de passe congés, gardé en mémoire 15 minutes sans activité) -->
   <section id="ecran-conges" class="cache">
     <div class="titre-encours">
@@ -510,7 +544,6 @@
       <div id="cg-soldes" class="cg-soldes"></div>
       <div class="cg-onglets" role="tablist">
         <button type="button" data-cg-vue="encoder" class="actif">Encoder</button>
-        <button type="button" data-cg-vue="rh">Mois (RH)</button>
         <button type="button" data-cg-vue="garde">Fériés</button>
       </div>
       <div id="cg-vue-encoder">
@@ -522,10 +555,6 @@
         <button id="cg-enregistrer" class="btn" type="button" disabled>Choisissez des jours</button>
         <h3>Jours encodés ce mois</h3>
         <div id="cg-liste-mois"></div>
-      </div>
-      <div id="cg-vue-rh" class="cache">
-        <p id="cg-rh-compteur" class="aide"></p>
-        <div id="cg-liste-rh"></div>
       </div>
       <div id="cg-vue-garde" class="cache">
         <!-- v20 : la garde se remplace dans « Encoder » (type « ⇄ Remplacer garde ») -->
@@ -888,6 +917,7 @@
     $('btn-deconnexion').classList.add('cache');
     cgFermer();                    // v17 : écran Congés fermé et mot de passe congés oublié
     $('btn-conges').classList.add('cache');
+    dirFermer();                   // v22 : Mois RH et boutons écrans cachés
     $('ecran-connexion').classList.remove('cache');
     $('mdp').value = '';
     message('msg-connexion', 'erreur', erreur ? MESSAGES[erreur] || MESSAGES.erreur_serveur : '');
@@ -898,6 +928,8 @@
     $('ecran-encodage').classList.remove('cache');
     $('btn-deconnexion').classList.remove('cache');
     $('btn-conges').classList.toggle('cache', !AVEC_INCOMPLETES);   // v17 : congés seulement avec le relais
+    $('direction').classList.toggle('cache', !AVEC_INCOMPLETES);     // v22 : Mois RH + écrans, relais seulement
+    if (AVEC_INCOMPLETES) dirChargerEcrans();
     revenirAuxTypes();
     etat.suiviActif = true;
     etat.debutSuivi = Date.now();
@@ -1262,6 +1294,7 @@
     if (document.visibilityState === 'visible') {
       if (!etat.cafes.length) rafraichirCafes(false, true);   // toujours pas de liste : nouvel essai à la reprise
       afficherEnCours(); chargerEnCours(false, true); chargerIncompletes(false, true); chargerRapports(false, true); demarrerRafraichissement();
+      if (AVEC_INCOMPLETES) dirChargerEcrans();
     }
     else arreterRafraichissement();
   });
@@ -2110,7 +2143,7 @@
     $('ecran-conges').classList.add('cache');
   }
   function cgOuvrir() {
-    $('ecran-encodage').classList.add('cache');
+    $('ecran-encodage').classList.add('cache'); $('ecran-rh').classList.add('cache');
     $('ecran-conges').classList.remove('cache');
     window.scrollTo(0, 0);
     if (cg.mdp) { cgCharger(); cgRelancerMinuteur(); } else setTimeout(() => $('cg-mdp').focus(), 50);
@@ -2178,10 +2211,9 @@
   }
   function cgAfficherVue() {
     document.querySelectorAll('[data-cg-vue]').forEach((b) => b.classList.toggle('actif', b.dataset.cgVue === cg.vue));
-    ['encoder', 'rh', 'garde'].forEach((v) => $('cg-vue-' + v).classList.toggle('cache', v !== cg.vue));
+    ['encoder', 'garde'].forEach((v) => $('cg-vue-' + v).classList.toggle('cache', v !== cg.vue));
     if (!cg.d) return;
     if (cg.vue === 'encoder') { cgAfficherChoix(); cgAfficherCalendrier(); cgAfficherListeMois(); }
-    else if (cg.vue === 'rh') cgAfficherRh();
     else cgAfficherGarde();
   }
   function cgAfficherSoldes() {
@@ -2302,27 +2334,6 @@
       z.appendChild(l);
     });
   }
-  function cgAfficherRh() {
-    const z = $('cg-liste-rh'); z.innerHTML = '';
-    const prefixe = cg.d.annee + '-' + String(cg.d.mois).padStart(2, '0');
-    const va = cg.d.jours.filter((x) => x.type === 'VA' && x.date.startsWith(prefixe));
-    const reste = va.filter((x) => x.rh !== 'oui').length;
-    $('cg-rh-compteur').textContent = va.length
-      ? va.length + ' jour' + (va.length > 1 ? 's' : '') + ' de VA en ' + CG_MOIS[cg.d.mois - 1] + ' ; ' +
-        (reste ? reste + ' reste' + (reste > 1 ? 'nt' : '') + ' à encoder.' : 'tous encodés.')
-      : 'Aucun VA en ' + CG_MOIS[cg.d.mois - 1] + ' ' + cg.d.annee + '. (Seuls les VA sont déclarés ; RJF et R n’apparaissent pas ici.)';
-    va.forEach((x) => {
-      const l = cgEl('div', 'cg-ligne');
-      l.appendChild(cgEl('span', 'd', cgFr(x.date)));
-      l.appendChild(cgPuce(x.technicien));
-      l.appendChild(cgEl('span', 'r', x.rh === 'oui' && x.rh_le ? 'encodé le ' + cgFr(x.rh_le) : ''));
-      const lab = cgEl('label', 'cg-rh'), c = cgEl('input'); c.type = 'checkbox'; c.checked = x.rh === 'oui';
-      lab.appendChild(c); lab.appendChild(document.createTextNode('Encodé'));
-      c.addEventListener('change', () => cgCocherRh(x, c));
-      l.appendChild(lab);
-      z.appendChild(l);
-    });
-  }
   function cgAfficherGarde() {
     const d = cg.d;   // v20 : fériés seulement (la garde se remplace dans « Encoder »)
     const zf = $('cg-feries'); zf.innerHTML = '';
@@ -2439,14 +2450,6 @@
     occupe(btn, false, 'Supprimer');
     if (!CG_VERROU[r.erreur]) { message('cg-msg', 'erreur', cgErreur(r)); if (r.erreur === 'introuvable' || r.erreur === 'feuille_modifiee') cgCharger(); }
   }
-  async function cgCocherRh(x, caseRh) {
-    caseRh.disabled = true;
-    const r = await cgAppel({ action: 'conges_rh', id: x.id, encode: caseRh.checked });
-    caseRh.disabled = false;
-    if (r.ok) { x.rh = caseRh.checked ? 'oui' : 'non'; x.rh_le = caseRh.checked ? jourBruxelles() : ''; return cgAfficherRh(); }
-    caseRh.checked = !caseRh.checked;
-    if (!CG_VERROU[r.erreur]) { message('cg-msg', 'erreur', cgErreur(r)); if (r.erreur === 'introuvable' || r.erreur === 'feuille_modifiee') cgCharger(); }
-  }
   async function cgAttribuerFerie(f, sel) {
     sel.disabled = true;
     const r = await cgAppel({ action: 'ferie_attribuer', date: f.date, technicien: sel.value });
@@ -2458,6 +2461,117 @@
                      ' de ce férié (' + cgFr(f.date) + '). Annulez d’abord un de ses ' + r.type + ', puis recommencez.');
     if (!CG_VERROU[r.erreur]) message('cg-msg', 'erreur', cgErreur(r));
   }
+  /* ---------- v22 : direction (mot de passe de la PWA seulement) ---------- */
+  const dir = { annee: 0, mois: 0, d: null, ecrans: [], lecture: null };
+  const DIR_MESSAGES = { ecran_inconnu: 'Écran inconnu : la liste a été actualisée.', mode_inconnu: 'Mode inconnu.',
+                         pas_va: 'Seuls les VA ont une case « Encodé ».' };
+  const dirErreur = (r) => DIR_MESSAGES[r.erreur] || CG_MESSAGES[r.erreur] || MESSAGES[r.erreur] || MESSAGES.erreur_serveur;
+  async function dirAppel(corps, delai) {
+    const r = await appeler(corps, delai || DELAI_ENVOI_MS);
+    if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') deconnecterPour(r.erreur);
+    return r;
+  }
+  function dirFermer() {
+    $('direction').classList.add('cache'); $('ecran-rh').classList.add('cache');
+    dir.d = null; dir.ecrans = []; $('ecrans-boutons').innerHTML = '';
+  }
+  // Écrans TV : un bouton par Pi (nom donné par le relais : « Pi 4 », « Pi 3 »). Touche = l'autre mode.
+  function dirChargerEcrans() {
+    if (dir.lecture) return dir.lecture;
+    dir.lecture = dirAppel({ action: 'ecrans_lire' }, DELAI_LECTURE_MS)
+      .then((r) => { if (r.ok) { dir.ecrans = r.ecrans || []; dirAfficherEcrans(); } })
+      .finally(() => { dir.lecture = null; });
+    return dir.lecture;
+  }
+  function dirAfficherEcrans() {
+    const z = $('ecrans-boutons'); z.innerHTML = '';
+    dir.ecrans.forEach((e) => {
+      const b = cgEl('button', 'btn-lien btn-ecran' + (e.mode === 'conges' ? ' conges' : '') + (e.en_ligne ? '' : ' horsligne'));
+      b.type = 'button'; b.dataset.ecran = e.id;
+      b.appendChild(cgEl('b', '', e.nom));
+      b.appendChild(cgEl('small', '', e.mode === 'conges' ? 'Congés' : 'Interventions'));
+      b.title = e.nom + ' : ' + (e.mode === 'conges' ? 'affiche les congés' : 'affiche les interventions') +
+                (e.en_ligne ? '' : ' (hors ligne' + (e.vu_le ? ', vu le ' + e.vu_le : '') + ')') + '. Toucher pour basculer.';
+      b.addEventListener('click', () => dirBasculer(e, b));
+      z.appendChild(b);
+    });
+  }
+  async function dirBasculer(e, b) {
+    const mode = e.mode === 'conges' ? 'interventions' : 'conges';
+    b.disabled = true;
+    const r = await dirAppel({ action: 'ecran_basculer', id: e.id, mode });
+    b.disabled = false;
+    if (r.ok) { dir.ecrans = r.ecrans || []; dirAfficherEcrans();
+                return toast(e.nom + ' : ' + (mode === 'conges' ? 'congés' : 'interventions') + ' (dans 30 secondes environ)'); }
+    if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') { toast(dirErreur(r)); dirChargerEcrans(); }
+  }
+  // Mois RH : VA du mois, case « Encodé » (le relais note la date)
+  function dirOuvrirRh() {
+    $('ecran-encodage').classList.add('cache'); $('ecran-conges').classList.add('cache');
+    $('ecran-rh').classList.remove('cache');
+    window.scrollTo(0, 0);
+    if (!dir.annee) { const auj = jourBruxelles(); dir.annee = Number(auj.slice(0, 4)); dir.mois = Number(auj.slice(5, 7)); }
+    dirChargerRh();
+  }
+  function dirRetour() {
+    $('ecran-rh').classList.add('cache'); $('ecran-conges').classList.add('cache');
+    $('ecran-encodage').classList.remove('cache');
+    window.scrollTo(0, 0);
+  }
+  async function dirChargerRh() {
+    $('rh-titre-mois').textContent = CG_MOIS[dir.mois - 1] + ' ' + dir.annee;
+    message('rh-msg', '', '');
+    const demande = dir.annee * 100 + dir.mois;
+    const r = await dirAppel({ action: 'rh_lire', annee: dir.annee, mois: dir.mois }, DELAI_LECTURE_MS);
+    if (demande !== dir.annee * 100 + dir.mois) return;           // mois changé entre-temps
+    if (!r.ok) { if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') message('rh-msg', 'erreur', dirErreur(r), 'Réessayer', dirChargerRh); return; }
+    dir.d = r; dirAfficherRh();
+  }
+  function dirPuce(nom) {
+    const t = dir.d && dir.d.techniciens.find((x) => x.nom === nom), c = t ? t.couleur : '#888888';
+    const s = cgEl('span', 'cg-puce', nom); s.style.background = c; s.style.color = cgTexteSur(c); return s;
+  }
+  function dirAfficherRh() {
+    const d = dir.d, z = $('rh-liste'); z.innerHTML = '';
+    const reste = d.va.filter((x) => x.rh !== 'oui').length, nomMois = CG_MOIS[d.mois - 1];
+    $('rh-compteur').textContent = d.va.length
+      ? d.va.length + ' jour' + (d.va.length > 1 ? 's' : '') + ' de VA en ' + nomMois + ' ; ' +
+        (reste ? reste + ' reste' + (reste > 1 ? 'nt' : '') + ' à encoder.' : 'tous encodés.')
+      : 'Aucun VA en ' + nomMois + ' ' + d.annee + '. (Seuls les VA sont déclarés ; RJF et R n’apparaissent pas ici.)';
+    d.va.forEach((x) => {
+      const l = cgEl('div', 'cg-ligne');
+      l.appendChild(cgEl('span', 'd', cgFr(x.date)));
+      l.appendChild(dirPuce(x.technicien));
+      l.appendChild(cgEl('span', 'r', x.rh === 'oui' && x.rh_le ? 'encodé le ' + cgFr(x.rh_le) : ''));
+      const lab = cgEl('label', 'cg-rh'), c = cgEl('input'); c.type = 'checkbox'; c.checked = x.rh === 'oui';
+      lab.appendChild(c); lab.appendChild(document.createTextNode('Encodé'));
+      c.addEventListener('change', () => dirCocherRh(x, c));
+      l.appendChild(lab);
+      z.appendChild(l);
+    });
+  }
+  async function dirCocherRh(x, caseRh) {
+    caseRh.disabled = true;
+    const r = await dirAppel({ action: 'rh_cocher', id: x.id, encode: caseRh.checked });
+    caseRh.disabled = false;
+    if (r.ok) { x.rh = caseRh.checked ? 'oui' : 'non'; x.rh_le = caseRh.checked ? jourBruxelles() : ''; return dirAfficherRh(); }
+    caseRh.checked = !caseRh.checked;
+    if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') {
+      message('rh-msg', 'erreur', dirErreur(r));
+      if (r.erreur === 'introuvable' || r.erreur === 'feuille_modifiee') dirChargerRh();
+    }
+  }
+  function dirChangerMois(delta) {
+    let m = dir.mois + delta, a = dir.annee;
+    if (m < 1) { m = 12; a--; } if (m > 12) { m = 1; a++; }
+    dir.mois = m; dir.annee = a; $('rh-liste').innerHTML = ''; $('rh-compteur').textContent = 'Chargement…';
+    dirChargerRh();
+  }
+  $('btn-rh').addEventListener('click', dirOuvrirRh);
+  $('rh-retour').addEventListener('click', dirRetour);
+  $('rh-prec').addEventListener('click', () => dirChangerMois(-1));
+  $('rh-suiv').addEventListener('click', () => dirChangerMois(1));
+
   /* ---------- Démarrage ---------- */
   // Affichage IMMÉDIAT : aucune attente du script. Les 4 cartes et le formulaire s'affichent
   // avec la dernière liste de cafés enregistrée ; la liste (et le mot de passe) sont vérifiés
