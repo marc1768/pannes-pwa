@@ -17,12 +17,13 @@
 // puis remis à jour en arrière-plan depuis GitHub (la nouvelle version est utilisée à l'ouverture
 // suivante). Avant, on attendait le réseau d'abord : sur une connexion lente, la page elle-même
 // pouvait mettre de longues secondes à s'afficher.
+// v26 : cache « pannes-v36 » (« pannes-v37 » réservé au retour v26 -> v25) ; Programmations (interventions créées par le relais), ALERTE.
 // v25 : cache « pannes-v34 » (« pannes-v35 » réservé au retour v25 -> v24) ; soleil / lune à côté de chaque écran TV (thème de l'écran).
 // v24 : cache « pannes-v32 » (« pannes-v33 » réservé au retour v24 -> v23) ; thème clair « fin » + bouton soleil / lune (affichage seulement).
 // v23 : cache « pannes-v30 » (« pannes-v31 » réservé au retour v23 -> v22) ; aujourd'hui en rouge dans le calendrier Congés, boutons « Pi 4 M » / « Pi 3 K ».
 // v22 : cache « pannes-v28 » (« pannes-v27 » réservé au retour v21 -> v20, « pannes-v29 » au retour v22 -> v21) ; titre v22, Mois RH et boutons écrans TV dans l'en-tête.
 // v17 : cache « pannes-v18 » (« pannes-v17 » reste réservé au retour arrière v16 -> v15) ; titre v17, onglet Congés.
-const VERSION = 'pannes-v34';
+const VERSION = 'pannes-v36';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

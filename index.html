@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pannes v25 – Service technique</title>
+<title>Pannes v26 – Service technique</title>
 <meta name="description" content="Encodage des pannes, entretiens, livraisons et machines à café.">
 <meta name="theme-color" content="#0b1016">
 <meta name="color-scheme" content="dark">
@@ -379,6 +379,7 @@
   /* v22 : direction (sans mot de passe congés) : « Mois RH » et bascule des écrans TV, dans l'en-tête */
   header { flex-wrap: wrap; }
   #ecrans-boutons { display: contents; }
+  .paire-ecran { display: inline-flex; gap: 6px; align-items: stretch; }   /* v26 : bouton du Pi + son soleil / sa lune, ensemble */
   #direction { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .btn-ecran { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.1; padding: 5px 10px; min-width: 84px; }
   .btn-ecran b { font-size: .9rem; } .btn-ecran small { font-size: .72rem; color: var(--doux); }
@@ -474,18 +475,74 @@
   [data-theme="clair"] .cg-j.auj .n { color: #b91c1c; }
   [data-theme="clair"] .cg-j .f { color: #6d28d9; }
   [data-theme="clair"] #cg-enregistrer { box-shadow: 0 2px 8px rgba(31,35,41,.12); }
+
+  /* ===== v26 : programmations et ALERTE ===== */
+  [data-type="ALERTE"] { --c: var(--panne); }
+  /* Carte « en cours » d'une ALERTE : ⚠ + Nature en rouge gras à la place du café ; ligne sans café : la Nature en noir */
+  .inter .cafe.titre-alerte { color: #f87171; font-weight: 800; overflow-wrap: anywhere; }
+  [data-theme="clair"] .inter .cafe.titre-alerte { color: #b91c1c; }
+  .inter .cafe.titre-libre { overflow-wrap: anywhere; }
+  /* Formulaire */
+  .prog-titre { font-size: 1.05rem; margin: 6px 0 12px; }
+  #ecran-prog > .prog-titre { margin-top: 26px; }
+  .prog-types { grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (min-width: 760px) { .prog-types { grid-template-columns: repeat(6, 1fr); } }
+  .prog-types .type { min-height: 84px; padding: 12px 6px; font-size: .82rem; gap: 6px; border-radius: 14px; }
+  .prog-types .type svg { width: 28px; height: 28px; }
+  .prog-types .type[aria-pressed="true"] { outline: 3px solid var(--texte); outline-offset: 2px; }
+  .prog-case { margin: 4px 0 10px; }
+  /* machines choisies : rouge des pannes, un peu plus foncé pour que le texte blanc reste lisible (4,8:1) */
+  #prog-machines { --accent: #dc2626; }
+  .prog-oblig { font-weight: 400; color: var(--doux); }
+  #ecran-prog select, #ecran-prog input[type=number] {
+    border: 1.5px solid var(--bord); border-radius: 12px; padding: 10px 12px; background: var(--fond); color: var(--texte); min-height: 46px; }
+  #ecran-prog select { width: 100%; }
+  #prog-intervalle { width: 90px; }
+  .prog-ligne { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 10px; }
+  .prog-ligne label { display: flex; align-items: center; gap: 6px; }
+  .prog-ligne input[type=date] { width: auto; }
+  .prog-apercu { border: 1px dashed var(--bord); border-radius: 12px; padding: 10px 12px; margin: 0 0 16px; color: var(--doux); font-size: .92rem; }
+  .prog-apercu b { color: var(--texte); }
+  .prog-apercu .err { color: var(--err-texte); font-weight: 650; }
+  /* Liste */
+  .prog-carte { background: var(--carte); border: 1px solid var(--bord); border-left: 6px solid var(--c); border-radius: 14px;
+                padding: 12px 12px 10px 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 3px; }
+  .prog-carte.inactive { opacity: .55; }
+  .prog-carte .haut { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .prog-carte .badge { background: color-mix(in srgb, var(--c) 78%, #000); color: #fff; border-radius: 10px; padding: 4px 8px;
+                       font-size: .72rem; font-weight: 800; }
+  [data-theme="clair"] .prog-carte .badge { background: color-mix(in srgb, var(--c) 8%, #fff); color: color-mix(in srgb, var(--c) 58%, #000);
+                                           box-shadow: inset 0 0 0 1.5px var(--c); font-weight: 700; }
+  .prog-carte .qui { font-weight: 750; overflow-wrap: anywhere; }
+  .prog-carte .qui.libre { font-weight: 600; font-style: italic; color: var(--doux); }
+  .prog-carte .qui.alerte { color: #f87171; }
+  [data-theme="clair"] .prog-carte .qui.alerte { color: #b91c1c; }
+  .prog-carte .nature { color: var(--texte); font-size: .92rem; overflow-wrap: anywhere; }
+  .prog-carte .info { color: var(--doux); font-size: .86rem; font-variant-numeric: tabular-nums; }
+  .prog-carte .info b { color: var(--texte); font-weight: 650; }
+  .prog-carte .actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .prog-carte .actif { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-right: auto; cursor: pointer; font-size: .9rem; }
+  .prog-carte .actif input { width: 22px; height: 22px; accent-color: var(--livraison); }
+  .prog-carte .actions button { min-height: 44px; min-width: 48px; border-radius: 10px; border: 1px solid var(--bord); background: var(--carte2);
+                                color: var(--texte); cursor: pointer; font-weight: 650; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
+  .prog-carte .actions button:disabled { opacity: .6; cursor: wait; }
+  .prog-carte .actions svg { width: 18px; height: 18px; }
+  .prog-carte .actions .supprimer:hover { color: var(--err-texte); }
+  .prog-vide { color: var(--doux); padding: 8px 0; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <h1>Service technique<small>Encodage des interventions · v25</small></h1>
+  <h1>Service technique<small>Encodage des interventions · v26</small></h1>
   <!-- v17 : onglet Congés (2e mot de passe, demandé à chaque ouverture, jamais enregistré sur l'appareil) -->
   <button id="btn-conges" class="btn-lien cache" type="button">Congés</button>
   <!-- v22 : « Mois RH » (sans mot de passe congés) et un bouton par écran TV (Pi) : touche = bascule Interventions / Congés -->
   <div id="direction" class="cache">
     <button id="btn-rh" class="btn-lien" type="button">Mois RH</button>
+    <!-- v26 : interventions programmées (mot de passe de la PWA) -->
+    <button id="btn-prog" class="btn-lien" type="button">Programmations</button>
     <span id="ecrans-boutons"></span>
   </div>
   <!-- v24 : thème clair / sombre (soleil = passer au clair, lune = revenir au sombre), à côté de la cloche -->
@@ -625,6 +682,65 @@
       <p id="rh-compteur" class="aide"></p>
       <div id="rh-liste"></div>
     </div>
+  </section>
+
+  <!-- v26 : Programmations : le relais crée lui-même les interventions selon une règle (onglet « Programmations »).
+       Mot de passe de la PWA seulement. Calcul des dates : bloc « dates-programmations » (même code que le relais). -->
+  <section id="ecran-prog" class="cache">
+    <div class="titre-encours">
+      <h2>Programmations</h2>
+      <button id="prog-retour" class="btn-lien" type="button">← Interventions</button>
+    </div>
+    <form id="prog-form" class="boite" autocomplete="off" novalidate>
+      <h3 class="prog-titre">Nouvelle programmation</h3>
+      <label class="champ">Catégorie</label>
+      <div id="prog-types" class="types prog-types"></div>
+      <div id="prog-bloc-machines" class="bloc cache">
+        <label class="champ">Machine(s) concernée(s)</label>
+        <div id="prog-machines" class="puces"></div>
+      </div>
+      <div id="prog-bloc-cafe" class="bloc">
+        <label class="champ" for="prog-recherche">Café / salle</label>
+        <label class="case prog-case"><input id="prog-libre" type="checkbox"><span>Champ libre (sans café : seule la Nature compte)</span></label>
+        <div id="prog-zone-recherche">
+          <input id="prog-recherche" type="search" placeholder="Rechercher un nom ou une ville…" autocomplete="off">
+          <div class="filtre-lic" role="group" aria-label="Type d'adresse">
+            <label class="lic lic-c"><input id="prog-lic-c" type="checkbox" checked><span>C · adresse du café</span></label>
+            <label class="lic lic-z"><input id="prog-lic-z" type="checkbox" checked><span>Z · adresse de facturation</span></label>
+          </div>
+          <ul id="prog-liste" class="liste-cafes" role="listbox"></ul>
+        </div>
+        <div id="prog-choisi" class="choisi cache">
+          <div><strong id="prog-cafe-nom"></strong><span id="prog-cafe-ville"></span><span id="prog-cafe-badge" class="badge-lic badge-choisi cache"></span></div>
+          <button id="prog-autre" type="button">Changer</button>
+        </div>
+      </div>
+      <div class="bloc">
+        <label class="champ" for="prog-nature">Nature <span class="prog-oblig">(obligatoire)</span></label>
+        <textarea id="prog-nature" maxlength="500" placeholder="Ex. : entretien du camion, ranger l'atelier…"></textarea>
+      </div>
+      <div class="bloc">
+        <label class="champ" for="prog-regle">Règle</label>
+        <select id="prog-regle">
+          <option value="UNIQUE">Une seule fois</option>
+          <option value="JOURS">Tous les X jours</option>
+          <option value="SEMAINES">Toutes les X semaines</option>
+          <option value="MOIS">Tous les X mois (même numéro de jour)</option>
+          <option value="CONTAINERS">Containers (avant-dernier jour ouvrable du mois)</option>
+        </select>
+        <div class="prog-ligne">
+          <label id="prog-bloc-intervalle" class="cache">X =&nbsp;<input id="prog-intervalle" type="number" min="1" max="366" value="1" inputmode="numeric"></label>
+          <label id="prog-bloc-date"><span id="prog-libelle-date">Date</span>&nbsp;<input id="prog-date" type="date"></label>
+        </div>
+        <label id="prog-bloc-weekend" class="case prog-case cache"><input id="prog-weekend" type="checkbox"><span>Autoriser le week-end (sinon : samedi et dimanche -> vendredi)</span></label>
+      </div>
+      <div id="prog-apercu" class="prog-apercu" aria-live="polite"></div>
+      <button id="prog-enregistrer" class="btn" type="submit">Enregistrer la programmation</button>
+      <div id="prog-msg"></div>
+    </form>
+    <h3 class="prog-titre">Programmations enregistrées</h3>
+    <div id="prog-msg-liste"></div>
+    <div id="prog-liste-progs"></div>
   </section>
 
   <!-- v17 : Écran 3 : congés, récupérations et gardes (mot de passe congés, gardé en mémoire 15 minutes sans activité) -->
@@ -1529,23 +1645,31 @@
     h.appendChild(c); zone.appendChild(h);
   }
   const cleInter = (i) => i.ligne + '|' + i.horodateur;
+  // v26 : ligne ALERTE (programmation) ; nom affiché d'une ligne : le café, sinon (sans café) la Nature.
+  const estAlerte = (i) => normType(i.appareil) === 'ALERTE';
+  const nomLigne = (i) => String(i.cafe || '').trim() || String(i.nature || '').trim() || 'Intervention';
   const nomMachine = (m) => m.toUpperCase() === 'INDETERMINE' ? 'Machine à déterminer' : m;
   function carte(i, qui, quand) {
     const d = document.createElement('div');
     const type = typeLigne(i);   // v11 : même règle de type que le tri
     d.className = 'inter'; d.dataset.type = type;
-    const b = document.createElement('div'); b.className = 'badge'; b.textContent = LIBELLES[type].toUpperCase();
+    // v26 : ALERTE (programmation) = une panne, mais ⚠ + Nature en rouge gras à la place du café (pas de machine, Nature non répétée) ;
+    // ligne sans café (programmation « champ libre ») : la Nature à la place du café, en noir.
+    const alerte = estAlerte(i), sansCafe = !String(i.cafe || '').trim() && !!i.nature;
+    const b = document.createElement('div'); b.className = 'badge'; b.textContent = alerte ? 'ALERTE' : LIBELLES[type].toUpperCase();
     const contenu = document.createElement('div'); contenu.className = 'contenu';
-    const c = document.createElement('div'); c.className = 'cafe'; c.textContent = i.cafe + ' ';
-    const v = document.createElement('span'); v.textContent = '· ' + i.ville; c.appendChild(v);
+    const c = document.createElement('div'); c.className = 'cafe';
+    if (alerte) { c.classList.add('titre-alerte'); c.textContent = '⚠ ' + i.nature; }
+    else if (sansCafe) { c.classList.add('titre-libre'); c.textContent = i.nature; }
+    else { c.textContent = i.cafe + ' '; const v = document.createElement('span'); v.textContent = '· ' + i.ville; c.appendChild(v); }
     contenu.appendChild(c);
-    if (type === 'PANNE') {
+    if (type === 'PANNE' && !alerte) {
       const m = document.createElement('div'); m.className = 'machines';
       const liste = String(i.appareil || '').split(/\s*,\s*/).filter(Boolean).map(nomMachine);
       m.textContent = liste.length ? liste.join(' · ') : 'Machine à déterminer';
       contenu.appendChild(m);
     }
-    if (i.nature) {
+    if (i.nature && !alerte && !sansCafe) {
       const n = document.createElement('div'); n.className = 'nature'; n.textContent = i.nature; n.title = i.nature;
       contenu.appendChild(n);
     }
@@ -1572,7 +1696,7 @@
     }
     const p = document.createElement('button');
     p.type = 'button'; p.className = 'poubelle';
-    p.setAttribute('aria-label', 'Annuler l’intervention ' + i.cafe);
+    p.setAttribute('aria-label', 'Annuler l’intervention ' + nomLigne(i));
     const enCours = etat.annulations.has(cleInter(i));
     if (enCours) { d.classList.add('en-annulation'); p.disabled = true; p.innerHTML = '<span class="chargement"></span>'; }
     else { p.innerHTML = ICONES.POUBELLE; p.addEventListener('click', () => demanderAnnulation(i)); }
@@ -1587,7 +1711,7 @@
     if (etat.annulations.has(cleInter(i))) return;
     aConfirmer = i;
     $('dlg-titre').textContent = 'Annuler cette intervention ?';
-    $('dlg-texte').textContent = i.cafe + ' – ' + LIBELLES[typeLigne(i)];
+    $('dlg-texte').textContent = nomLigne(i) + ' – ' + (estAlerte(i) ? 'Alerte' : LIBELLES[typeLigne(i)]);
     $('voile-annuler').classList.remove('cache');
     setTimeout(() => $('dlg-non').focus(), 30);
   }
@@ -1626,7 +1750,7 @@
     if (r.ok || r.erreur === 'deja_annulee') {
       etat.masquees.add(cle);
       afficherEnCours();
-      const texte = r.ok ? 'Intervention annulée : ' + i.cafe + ' – ' + LIBELLES[typeLigne(i)] + '.' : MESSAGES.deja_annulee;
+      const texte = r.ok ? 'Intervention annulée : ' + nomLigne(i) + ' – ' + (estAlerte(i) ? 'Alerte' : LIBELLES[typeLigne(i)]) + '.' : MESSAGES.deja_annulee;
       message('msg-encours', 'ok', texte);
       toast('✓ ' + texte);
     } else if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') {
@@ -1637,7 +1761,7 @@
       chargerEnCours(false, true);
     } else if (r.erreur === 'reseau' || r.erreur === 'delai') {
       afficherEnCours();
-      message('msg-encours', 'erreur', 'Impossible de joindre le serveur : l’annulation de ' + i.cafe + ' n’est pas confirmée. Rien ne sera fait en double.',
+      message('msg-encours', 'erreur', 'Impossible de joindre le serveur : l’annulation de ' + nomLigne(i) + ' n’est pas confirmée. Rien ne sera fait en double.',
               'Réessayer', () => annulerIntervention(i, demande));
     } else {
       afficherEnCours();
@@ -2250,7 +2374,7 @@
     $('ecran-conges').classList.add('cache');
   }
   function cgOuvrir() {
-    $('ecran-encodage').classList.add('cache'); $('ecran-rh').classList.add('cache');
+    $('ecran-encodage').classList.add('cache'); $('ecran-rh').classList.add('cache'); $('ecran-prog').classList.add('cache');   // v26
     $('ecran-conges').classList.remove('cache');
     window.scrollTo(0, 0);
     if (cg.mdp) { cgCharger(); cgRelancerMinuteur(); } else setTimeout(() => $('cg-mdp').focus(), 50);
@@ -2583,6 +2707,7 @@
   }
   function dirFermer() {
     $('direction').classList.add('cache'); $('ecran-rh').classList.add('cache');
+    $('ecran-prog').classList.add('cache'); prog.liste = null; $('prog-liste-progs').innerHTML = '';   // v26
     dir.d = null; dir.ecrans = []; $('ecrans-boutons').innerHTML = '';
   }
   // Écrans TV : un bouton par Pi (nom donné par le relais : « Pi 4 », « Pi 3 »). Touche = l'autre mode.
@@ -2603,7 +2728,8 @@
       b.title = libEcran(e) + ' : ' + (e.mode === 'conges' ? 'affiche les congés' : 'affiche les interventions') +
                 (e.en_ligne ? '' : ' (hors ligne' + (e.vu_le ? ', vu le ' + e.vu_le : '') + ')') + '. Toucher pour basculer.';
       b.addEventListener('click', () => dirBasculer(e, b));
-      z.appendChild(b);
+      // v26 : bouton du Pi et son soleil / sa lune dans un même bloc, jamais séparés par un retour à la ligne
+      const paire = cgEl('span', 'paire-ecran'); paire.appendChild(b); z.appendChild(paire);
       // v25 : thème de CET écran (soleil = clair, lune = sombre). Absent si le relais ne connaît pas encore les thèmes.
       if (e.theme === 'clair' || e.theme === 'sombre') {
         const clair = e.theme === 'clair';
@@ -2613,7 +2739,7 @@
         const texte = libEcran(e) + ' : thème ' + e.theme + '. Toucher pour passer en ' + (clair ? 'sombre' : 'clair') + '.';
         t.title = texte; t.setAttribute('aria-label', texte);
         t.addEventListener('click', () => dirTheme(e, t));
-        z.appendChild(t);
+        paire.appendChild(t);
       }
     });
   }
@@ -2639,7 +2765,7 @@
   }
   // Mois RH : VA du mois, case « Encodé » (le relais note la date)
   function dirOuvrirRh() {
-    $('ecran-encodage').classList.add('cache'); $('ecran-conges').classList.add('cache');
+    $('ecran-encodage').classList.add('cache'); $('ecran-conges').classList.add('cache'); $('ecran-prog').classList.add('cache');   // v26
     $('ecran-rh').classList.remove('cache');
     window.scrollTo(0, 0);
     if (!dir.annee) { const auj = jourBruxelles(); dir.annee = Number(auj.slice(0, 4)); dir.mois = Number(auj.slice(5, 7)); }
@@ -2703,6 +2829,329 @@
   $('rh-retour').addEventListener('click', dirRetour);
   $('rh-prec').addEventListener('click', () => dirChangerMois(-1));
   $('rh-suiv').addEventListener('click', () => dirChangerMois(1));
+
+  /* ---------- v26 : Programmations (le relais crée lui-même les interventions selon une règle) ---------- */
+  // Calcul des dates : copie EXACTE de relais-cloudflare\src\programmations-dates.js (sans les mots « export »).
+  // Ne pas modifier ici : modifier le fichier du relais, puis recopier (test_programmations.py vérifie l'égalité).
+  /* DEBUT dates-programmations */
+// ===== Dates des programmations (29/10/2026) =====
+// MÊME CODE dans le relais (src/programmations-dates.js) et dans la PWA (bloc « dates-programmations » de index.html,
+// recopié tel quel SANS les mots « ») : test/test_programmations.py vérifie que les deux copies sont identiques.
+// Jours = « AAAA-MM-JJ », calendrier pur (aucune heure : le changement d'heure ne joue pas). « Aujourd'hui » = jour de Bruxelles.
+// Programmation p = { regle, intervalle, depart, weekend (true/false), cree } ; « depart » et « cree » en « AAAA-MM-JJ ».
+//   JOURS / SEMAINES : depart + k × intervalle (jours ou 7 × semaines)
+//   MOIS : même numéro de jour que depart tous les « intervalle » mois (31 -> dernier jour du mois s'il n'existe pas)
+//   week-end non autorisé (JOURS / SEMAINES / MOIS) : samedi ou dimanche -> vendredi précédent
+//   CONTAINERS : chaque mois, le jour ouvrable (lundi-vendredi) qui précède le dernier jour ouvrable du mois
+//                (fériés non gérés) ; départ = mois de création, intervalle et week-end ignorés.
+//   UNIQUE : une seule date (depart), samedi et dimanche gardés tels quels, pas d'intervalle.
+// Aucune date antérieure au jour de création (cree) n'est jamais due.
+const REGLES_PROG = ['UNIQUE', 'JOURS', 'SEMAINES', 'MOIS', 'CONTAINERS'];
+const PJ_MS = 86400000;
+function progJourUtc(j) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(j || '')); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; }
+function progJourValide(j) { const t = progJourUtc(j); return isFinite(t) && new Date(t).toISOString().slice(0, 10) === j; }
+const pjIso = (t) => new Date(t).toISOString().slice(0, 10);
+function progPlus(j, n) { return pjIso(progJourUtc(j) + n * PJ_MS); }
+const pjSem = (j) => new Date(progJourUtc(j)).getUTCDay();            // 0 = dimanche … 6 = samedi
+const pjWeekend = (j) => pjSem(j) === 0 || pjSem(j) === 6;
+// Jour « jour » du mois (année a, mois m0 à partir de 0, débordement permis), ramené au dernier jour du mois s'il n'existe pas.
+function pjMois(a, m0, jour) {
+  const d = new Date(Date.UTC(a, m0, 1)), A = d.getUTCFullYear(), M = d.getUTCMonth();
+  return pjIso(Date.UTC(A, M, Math.min(jour, new Date(Date.UTC(A, M + 1, 0)).getUTCDate())));
+}
+// Samedi ou dimanche -> vendredi précédent ; autre jour : inchangé.
+function progVendredi(j) { const s = pjSem(j); return s === 6 ? progPlus(j, -1) : s === 0 ? progPlus(j, -2) : j; }
+// Containers du mois (a, m0) : dernier jour ouvrable du mois, puis le jour ouvrable qui le précède.
+function progContainers(a, m0) {
+  let d = pjMois(a, m0, 31);
+  while (pjWeekend(d)) d = progPlus(d, -1);
+  d = progPlus(d, -1);
+  while (pjWeekend(d)) d = progPlus(d, -1);
+  return d;
+}
+const pjX = (p) => Math.max(1, Math.floor(Number(p.intervalle) || 1));
+const pjDepart = (p) => (p.regle === 'CONTAINERS' ? p.cree : p.depart);
+// k-ième date (k = 0, 1, 2…), décalage du week-end compris.
+function progOccurrence(p, k) {
+  const dep = pjDepart(p), X = pjX(p), d = new Date(progJourUtc(dep));
+  if (p.regle === 'UNIQUE') return dep;
+  if (p.regle === 'CONTAINERS') return progContainers(d.getUTCFullYear(), d.getUTCMonth() + k);
+  const brute = p.regle === 'JOURS' ? progPlus(dep, k * X) : p.regle === 'SEMAINES' ? progPlus(dep, 7 * k * X)
+              : pjMois(d.getUTCFullYear(), d.getUTCMonth() + k * X, d.getUTCDate());
+  return p.weekend ? brute : progVendredi(brute);
+}
+// Indice approché de la 1re date après le jour j (les dates ne reculent jamais quand k augmente).
+function pjIndice(p, j) {
+  const dep = pjDepart(p), jours = (progJourUtc(j) - progJourUtc(dep)) / PJ_MS;
+  if (!(jours > 0)) return 0;
+  const a = new Date(progJourUtc(dep)), b = new Date(progJourUtc(j));
+  const mois = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth();
+  if (p.regle === 'JOURS') return Math.floor(jours / pjX(p)) + 1;
+  if (p.regle === 'SEMAINES') return Math.floor(jours / (7 * pjX(p))) + 1;
+  return p.regle === 'MOIS' ? Math.floor(mois / pjX(p)) + 1 : mois + 1;
+}
+// Date due la plus récente <= jour (pas de rattrapage en série : une seule), ou '' (rien de dû, ou seulement avant la création).
+function progDerniereDue(p, jour) {
+  if (!progJourValide(pjDepart(p))) return '';
+  if (p.regle === 'UNIQUE') return p.depart <= jour && p.depart >= p.cree ? p.depart : '';
+  for (let k = pjIndice(p, jour) + 3; k >= 0; k--) {
+    const d = progOccurrence(p, k);
+    if (d <= jour) return d >= p.cree ? d : '';
+  }
+  return '';
+}
+// Les n prochaines dates >= depuis (jamais avant la création), sans doublon.
+function progProchaines(p, depuis, n) {
+  const res = [];
+  if (!progJourValide(pjDepart(p))) return res;
+  const debut = depuis > p.cree ? depuis : p.cree;
+  if (p.regle === 'UNIQUE') return p.depart >= debut && n > 0 ? [p.depart] : [];
+  for (let k = Math.max(0, pjIndice(p, debut) - 3), i = 0; res.length < n && i < 5000; k++, i++) {
+    const d = progOccurrence(p, k);
+    if (d >= debut && !res.includes(d)) res.push(d);
+  }
+  return res;
+}
+// Prochaine date à traiter : une date due pas encore traitée (aujourd'hui, ou manquée), sinon la suivante après aujourd'hui.
+function progProchaine(p, aujourdhui, derniere) {
+  const due = progDerniereDue(p, aujourdhui);
+  if (due && (!derniere || due > derniere)) return due;
+  return progProchaines(p, progPlus(aujourdhui, 1), 1)[0] || '';
+}
+// Règle en clair : « tous les jours », « toutes les 2 semaines », « tous les mois, le 31 », « Containers ».
+function progTexteRegle(p) {
+  const X = pjX(p), jour = Number(String(p.depart || '').slice(8, 10));
+  const we = p.weekend ? '' : ' (week-end -> vendredi)';
+  if (p.regle === 'UNIQUE') return 'une seule fois, le ' + String(p.depart || '').split('-').reverse().join('/');
+  if (p.regle === 'JOURS') return (X === 1 ? 'tous les jours' : 'tous les ' + X + ' jours') + we;
+  if (p.regle === 'SEMAINES') return (X === 1 ? 'toutes les semaines' : 'toutes les ' + X + ' semaines') + we;
+  if (p.regle === 'MOIS') return (X === 1 ? 'tous les mois' : 'tous les ' + X + ' mois') + ', le ' + jour + we;
+  return 'Containers (avant-dernier jour ouvrable du mois)';
+}
+// Jour et heure de Bruxelles d'un instant : { jour: « AAAA-MM-JJ », heure: 0-23, minute: 0-59 }.
+function progBruxelles(date) {
+  const p = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date).forEach((x) => { p[x.type] = x.value; });
+  return { jour: p.year + '-' + p.month + '-' + p.day, heure: Number(p.hour), minute: Number(p.minute) };
+}
+// ===== fin du bloc partagé =====
+  /* FIN dates-programmations */
+  const PROG_TYPES = ['PANNE', 'MACHINE A CAFE', 'ENTRETIEN', 'LIVRAISON', 'LIVRAISON HORECA', 'ALERTE'];
+  const PROG_LIBELLES = Object.assign({}, LIBELLES, { 'ALERTE': 'Alerte' });
+  const ICONE_ALERTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+  const PROG_MESSAGES = {
+    categorie_invalide: 'Choisissez une catégorie.', regle_invalide: 'Règle inconnue.', nature_manquante: 'La Nature est obligatoire.',
+    intervalle_invalide: 'L’intervalle doit être un nombre entier de 1 à 366.', date_invalide: 'Date invalide.',
+    date_passee: 'Cette date est déjà passée.', date_trop_loin: 'Date trop lointaine (10 ans au plus).',
+    cafe_inconnu: 'Ce café n’est plus dans la liste : choisissez-en un autre.',
+    programmation_introuvable: 'Programmation introuvable : la liste a été actualisée.', programmation_inactive: 'Cette programmation est désactivée.' };
+  const progErreur = (r) => PROG_MESSAGES[r.erreur] || MESSAGES[r.erreur] || MESSAGES.erreur_serveur;
+  const prog = { type: '', cafe: null, machines: new Set(['INDETERMINE']), envoi: null, liste: null, aujourdhui: '' };
+  const JOURS_COURTS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+  const jourFr = (j) => (j ? JOURS_COURTS[new Date(progJourUtc(j)).getUTCDay()] + ' ' + j.slice(8, 10) + '/' + j.slice(5, 7) + '/' + j.slice(0, 4) : '');
+  const AVEC_INTERVALLE = ['JOURS', 'SEMAINES', 'MOIS'];
+  // Catégorie = valeur écrite telle quelle dans « Appareils café » (panne : machines séparées par « , », comme l'encodage).
+  const progCategorie = () => (prog.type === 'PANNE' ? MACHINES.filter((m) => prog.machines.has(m)).join(' , ') : prog.type);
+
+  function progOuvrir() {
+    ['ecran-encodage', 'ecran-conges', 'ecran-rh'].forEach((id) => $(id).classList.add('cache'));
+    $('ecran-prog').classList.remove('cache');
+    window.scrollTo(0, 0);
+    progFiltrer(); progApercu(); progCharger();
+  }
+  function progRetour() { $('ecran-prog').classList.add('cache'); $('ecran-encodage').classList.remove('cache'); window.scrollTo(0, 0); }
+  $('btn-prog').addEventListener('click', progOuvrir);
+  $('prog-retour').addEventListener('click', progRetour);
+
+  /* --- formulaire --- */
+  function progDessinerTypes() {
+    const z = $('prog-types'); z.innerHTML = ''; z.classList.toggle('avec-choix', !!prog.type);
+    PROG_TYPES.forEach((t) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'type'; b.dataset.type = t;
+      b.setAttribute('aria-pressed', prog.type === t ? 'true' : 'false');
+      const ico = document.createElement('span'); ico.innerHTML = t === 'ALERTE' ? ICONE_ALERTE : ICONES[t === 'LIVRAISON HORECA' ? 'LIVRAISON' : t];
+      b.append(ico, document.createTextNode(t === 'ALERTE' ? '⚠ ALERTE' : PROG_LIBELLES[t].toUpperCase()));
+      b.addEventListener('click', () => { prog.type = t; progDessinerTypes(); progMajFormulaire(); message('prog-msg', '', ''); });
+      z.appendChild(b);
+    });
+  }
+  function progDessinerMachines() {
+    const z = $('prog-machines'); z.innerHTML = '';
+    MACHINES.forEach((m) => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'puce' + (m === 'INDETERMINE' || m === 'AUTRE' ? ' speciale' : '');
+      b.textContent = m; b.setAttribute('aria-pressed', prog.machines.has(m) ? 'true' : 'false');
+      b.addEventListener('click', () => {      // même règle que l'encodage : INDETERMINE seul, ou une ou plusieurs machines
+        const s = prog.machines;
+        if (m === 'INDETERMINE') { s.clear(); s.add(m); }
+        else { if (s.has(m)) s.delete(m); else { s.add(m); s.delete('INDETERMINE'); } if (!s.size) s.add('INDETERMINE'); }
+        progDessinerMachines();
+      });
+      z.appendChild(b);
+    });
+  }
+  function progMajFormulaire() {
+    const t = prog.type, regle = $('prog-regle').value, libre = $('prog-libre').checked;
+    $('prog-bloc-machines').classList.toggle('cache', t !== 'PANNE');
+    $('prog-bloc-cafe').classList.toggle('cache', t === 'ALERTE');          // ALERTE : jamais de café
+    $('prog-zone-recherche').classList.toggle('cache', libre || !!prog.cafe);
+    $('prog-choisi').classList.toggle('cache', libre || !prog.cafe);
+    if (prog.cafe) { $('prog-cafe-nom').textContent = prog.cafe.nom; $('prog-cafe-ville').textContent = ' ' + prog.cafe.ville; }
+    badgeChoisi($('prog-cafe-badge'), prog.cafe);
+    $('prog-bloc-intervalle').classList.toggle('cache', !AVEC_INTERVALLE.includes(regle));
+    $('prog-bloc-weekend').classList.toggle('cache', !AVEC_INTERVALLE.includes(regle));
+    $('prog-bloc-date').classList.toggle('cache', regle === 'CONTAINERS');
+    $('prog-libelle-date').textContent = regle === 'UNIQUE' ? 'Date' : 'Date de départ';
+    $('prog-date').min = regle === 'UNIQUE' ? jourBruxelles() : '';
+    progApercu();
+  }
+  function progFiltrer() {
+    const ul = $('prog-liste'); ul.innerHTML = '';
+    if (!etat.cafes.length) { if (etat.motdepasse) ul.appendChild(indicateurCafes('li')); return; }
+    const res = chercherCafes($('prog-recherche').value, filtreDe('prog-lic'));
+    if (!res.length) { const li = document.createElement('li'); li.className = 'vide'; li.textContent = 'Aucun café trouvé.'; ul.appendChild(li); return; }
+    res.forEach((c, i) => ul.appendChild(ligneCafe(c, i, (x) => { prog.cafe = x; progMajFormulaire(); message('prog-msg', '', ''); })));
+  }
+  $('prog-recherche').addEventListener('input', progFiltrer);
+  lierFiltre('prog-lic', progFiltrer);
+  $('prog-autre').addEventListener('click', () => { prog.cafe = null; $('prog-recherche').value = ''; progFiltrer(); progMajFormulaire(); });
+  $('prog-libre').addEventListener('change', progMajFormulaire);
+  $('prog-regle').addEventListener('change', progMajFormulaire);
+  ['prog-intervalle', 'prog-date'].forEach((id) => { $(id).addEventListener('input', progApercu); $(id).addEventListener('change', progApercu); });
+  $('prog-weekend').addEventListener('change', progApercu);
+
+  // Programmation décrite par le formulaire (même forme que pour le relais) ; créée aujourd'hui.
+  function progObjet() {
+    const regle = $('prog-regle').value;
+    return { regle, intervalle: Number($('prog-intervalle').value), depart: regle === 'CONTAINERS' ? '' : $('prog-date').value,
+             weekend: $('prog-weekend').checked, cree: jourBruxelles() };
+  }
+  // '' si la règle est complète, sinon le message (mêmes contrôles que le relais, qui revérifie).
+  function progErreurRegle(p) {
+    if (AVEC_INTERVALLE.includes(p.regle) && !(Number.isInteger(p.intervalle) && p.intervalle >= 1 && p.intervalle <= 366)) return 'Intervalle : un nombre entier de 1 à 366.';
+    if (p.regle !== 'CONTAINERS' && !progJourValide(p.depart)) return p.regle === 'UNIQUE' ? 'Choisissez la date.' : 'Choisissez la date de départ.';
+    if (p.regle === 'UNIQUE' && p.depart < p.cree) return 'Cette date est déjà passée.';
+    return '';
+  }
+  // Aperçu : les 3 prochaines dates (« Une seule fois » : la date), calculées avec le même code que le relais.
+  function progApercu() {
+    const z = $('prog-apercu'); z.innerHTML = '';
+    const p = progObjet(), e = progErreurRegle(p);
+    if (e) { const s = document.createElement('span'); s.className = 'err'; s.textContent = e; z.appendChild(s); return; }
+    const dates = progProchaines(p, p.cree, p.regle === 'UNIQUE' ? 1 : 3);
+    z.append(p.regle === 'UNIQUE' ? 'Date : ' : 'Prochaines dates : ');
+    dates.forEach((d, k) => { if (k) z.append(' · '); const b = document.createElement('b'); b.textContent = jourFr(d); z.appendChild(b); });
+    z.append(' — ' + progTexteRegle(p) + '. La ligne est créée ce jour-là à 08:00' +
+             (dates[0] === p.cree && progBruxelles(new Date()).heure >= 8 ? ' (aujourd’hui : dans la minute qui suit l’enregistrement).' : '.'));
+  }
+  function progReinit() {
+    Object.assign(prog, { type: '', cafe: null, machines: new Set(['INDETERMINE']), envoi: null });
+    $('prog-libre').checked = false; $('prog-nature').value = ''; $('prog-regle').value = 'UNIQUE';
+    $('prog-intervalle').value = '1'; $('prog-date').value = jourBruxelles(); $('prog-weekend').checked = false;
+    $('prog-recherche').value = ''; remettreFiltre('prog-lic');
+    progDessinerTypes(); progDessinerMachines(); progFiltrer(); progMajFormulaire(); message('prog-msg', '', '');
+  }
+  $('prog-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = $('prog-enregistrer');
+    if (btn.disabled) return;
+    const p = progObjet(), t = prog.type, libre = t === 'ALERTE' || $('prog-libre').checked, nature = $('prog-nature').value.trim();
+    if (!t) return message('prog-msg', 'erreur', 'Choisissez une catégorie.');
+    if (!libre && !prog.cafe) return message('prog-msg', 'erreur', 'Choisissez un café, ou cochez « Champ libre ».');
+    if (!nature) { $('prog-nature').focus(); return message('prog-msg', 'erreur', 'La Nature est obligatoire.'); }
+    const e = progErreurRegle(p);
+    if (e) return message('prog-msg', 'erreur', e);
+    if (!prog.envoi) prog.envoi = nouvelId();          // même identifiant si l'envoi est répété : jamais deux programmations
+    message('prog-msg', '', '');
+    occupe(btn, true, 'Enregistrement…');
+    const r = await dirAppel({ action: 'prog_ajouter', id: prog.envoi, categorie: progCategorie(), weekend: p.weekend, champ_libre: libre,
+                               licence: libre ? '' : prog.cafe.licence, nom: libre ? '' : prog.cafe.nom, nature,
+                               regle: p.regle, intervalle: p.intervalle, date_depart: p.depart });
+    occupe(btn, false, 'Enregistrer la programmation');
+    if (r.ok) { toast('Programmation enregistrée'); progReinit(); return progCharger(); }
+    if (r.erreur === 'mot_de_passe' || r.erreur === 'bloque') return;
+    if (r.erreur === 'delai' || r.erreur === 'reseau')
+      return message('prog-msg', 'erreur', MESSAGES[r.erreur] + ' Touchez « Enregistrer » à nouveau : la programmation ne sera pas créée deux fois.');
+    prog.envoi = null;
+    message('prog-msg', 'erreur', progErreur(r));
+  });
+
+  /* --- liste --- */
+  async function progCharger() {
+    message('prog-msg-liste', '', '');
+    if (!prog.liste) { const z = $('prog-liste-progs'); z.innerHTML = ''; const p = document.createElement('p'); p.className = 'prog-vide'; p.textContent = 'Chargement…'; z.appendChild(p); }
+    const r = await dirAppel({ action: 'prog_lister' }, DELAI_LECTURE_MS);
+    if (!r.ok) { if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') message('prog-msg-liste', 'erreur', progErreur(r), 'Réessayer', progCharger); return; }
+    prog.liste = r.programmations || []; prog.aujourdhui = r.aujourdhui || jourBruxelles();
+    progAfficherListe();
+  }
+  const progDates = (p) => ({ regle: p.regle, intervalle: p.intervalle, depart: p.date_depart, weekend: p.weekend, cree: p.cree_le });
+  function progAfficherListe() {
+    const z = $('prog-liste-progs'); z.innerHTML = '';
+    if (!prog.liste.length) { const p = document.createElement('p'); p.className = 'prog-vide'; p.textContent = 'Aucune programmation.'; z.appendChild(p); return; }
+    // Actives d'abord (par prochaine date), puis les désactivées et les « une seule fois » terminées (grisées).
+    prog.liste.map((p) => ({ p, d: p.actif ? progProchaine(progDates(p), prog.aujourdhui, p.derniere) : '' }))
+      .sort((a, b) => (b.p.actif - a.p.actif) || cmp(a.d || '9999', b.d || '9999'))
+      .forEach(({ p, d }) => z.appendChild(progCarte(p, d)));
+  }
+  function progCarte(p, prochaine) {
+    const genre = PROG_TYPES.includes(p.categorie) ? p.categorie : 'PANNE';
+    const el = (tag, classe, texte) => { const e = document.createElement(tag); if (classe) e.className = classe; if (texte !== undefined) e.textContent = texte; return e; };
+    const c = el('div', 'prog-carte' + (p.actif ? '' : ' inactive')); c.dataset.type = genre; c.dataset.id = p.id;
+    const haut = el('div', 'haut');
+    haut.appendChild(el('span', 'badge', genre === 'ALERTE' ? 'ALERTE' : PROG_LIBELLES[genre].toUpperCase()));
+    haut.appendChild(genre === 'ALERTE' ? el('span', 'qui alerte', '⚠ Alerte') : p.cafe ? el('span', 'qui', p.cafe) : el('span', 'qui libre', 'Champ libre'));
+    c.appendChild(haut);
+    if (genre === 'PANNE') c.appendChild(el('div', 'info', 'Machines : ' + p.categorie.split(/\s*,\s*/).filter(Boolean).map(nomMachine).join(' · ')));
+    c.appendChild(el('div', 'nature', p.nature));
+    c.appendChild(el('div', 'info', progTexteRegle(progDates(p))));
+    const quand = el('div', 'info');
+    if (p.actif && prochaine) { quand.append('Prochaine : '); quand.appendChild(el('b', '', jourFr(prochaine))); }
+    else quand.textContent = p.actif ? 'Aucune date à venir' : (p.regle === 'UNIQUE' && /^Terminée/.test(p.dernier_resultat) ? 'Terminée' : 'Désactivée');
+    c.appendChild(quand);
+    if (p.dernier_resultat) c.appendChild(el('div', 'info', 'Dernier résultat : ' + p.dernier_resultat));
+    const resume = (genre === 'ALERTE' ? '⚠ Alerte' : (p.cafe || 'Champ libre') + ' – ' + PROG_LIBELLES[genre]) + '\n' + p.nature;
+    const actions = el('div', 'actions');
+    const lab = el('label', 'actif'), cb = el('input'); cb.type = 'checkbox'; cb.checked = p.actif;
+    lab.append(cb, 'Active'); actions.appendChild(lab);
+    cb.addEventListener('change', async () => {
+      cb.disabled = true;
+      const r = await dirAppel({ action: 'prog_activer', id: p.id, actif: cb.checked });
+      cb.disabled = false;
+      // relue au relais : à la réactivation, il avance DerniereOccurrence (dates manquées ignorées) -> prochaine date juste
+      if (r.ok) { p.actif = cb.checked; progAfficherListe(); return progCharger(); }
+      cb.checked = !cb.checked;
+      if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') { message('prog-msg-liste', 'erreur', progErreur(r)); if (r.erreur === 'programmation_introuvable') progCharger(); }
+    });
+    const run = el('button', 'executer', '▶ Exécuter'); run.type = 'button'; run.disabled = !p.actif;
+    run.title = 'Créer l’intervention maintenant (même traitement que le passage de 08:00)';
+    run.addEventListener('click', async () => {
+      if (!window.confirm('Créer maintenant l’intervention de cette programmation ?\n\n' + resume +
+          '\n\nMême traitement que le passage automatique de 08:00 : rien n’est créé si la précédente est encore ouverte.' +
+          (p.regle === 'UNIQUE' ? '\nCette programmation « une seule fois » sera ensuite terminée.' : '\nLe calendrier normal ne change pas.'))) return;
+      occupe(run, true, '…');
+      const r = await dirAppel({ action: 'prog_executer', id: p.id });
+      if (r.ok) { toast(r.resultat || 'Rien à créer'); await progCharger(); chargerEnCours(true, true); return; }
+      occupe(run, false, '▶ Exécuter');
+      if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') { message('prog-msg-liste', 'erreur', progErreur(r)); progCharger(); }
+    });
+    actions.appendChild(run);
+    const del = el('button', 'supprimer'); del.type = 'button'; del.innerHTML = ICONES.POUBELLE;
+    del.setAttribute('aria-label', 'Supprimer la programmation'); del.title = 'Supprimer la programmation';
+    del.addEventListener('click', async () => {
+      if (!window.confirm('Supprimer cette programmation ?\n\n' + resume + '\n\nElle est retirée de l’onglet « Programmations ». Les interventions déjà créées restent.')) return;
+      del.disabled = true;
+      const r = await dirAppel({ action: 'prog_supprimer', id: p.id });
+      del.disabled = false;
+      if (r.ok) { toast('Programmation supprimée'); return progCharger(); }
+      if (r.erreur !== 'mot_de_passe' && r.erreur !== 'bloque') { message('prog-msg-liste', 'erreur', progErreur(r)); progCharger(); }
+    });
+    actions.appendChild(del);
+    c.appendChild(actions);
+    return c;
+  }
+  progReinit();
 
   /* ---------- Démarrage ---------- */
   // Affichage IMMÉDIAT : aucune attente du script. Les 4 cartes et le formulaire s'affichent
